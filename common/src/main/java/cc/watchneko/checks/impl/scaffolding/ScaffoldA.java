@@ -44,7 +44,7 @@ public final class ScaffoldA extends ScaffoldCheck {
 
         boolean keepY = face != BlockFace.UP && face != BlockFace.DOWN;
         if (keepY) {
-            if ((!player.isSneaking && dragClick < 2 && getInferredInput(player).getZ() < 0) || !player.onGround) {
+            if ((!player.isSneaking && dragClick < 2 || !player.onGround) && getInferredInput(player).getZ() < 0) {
                 buffer++;
             } else {
                 buffer = Math.max(0, buffer - 1);
