@@ -142,6 +142,8 @@ public class ConfigManagerFileImpl implements ConfigManager, BasicReloadable {
                 "    batch-size: 8\n" +
                 "    analysis-window-size: 10\n" +
                 "    min-cheat-votes: 6\n" +
+                "    local-gate-min-energy: 1.25\n" +
+                "    quota-cooldown-ms: 30000\n" +
                 "    debug-log: false";
 
         Files.write(config.toPath(), configString.getBytes());
