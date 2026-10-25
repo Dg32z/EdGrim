@@ -32,6 +32,16 @@ public final class RotationSequence {
         position++;
     }
 
+    /**
+     * How many rotation updates have been observed so far.
+     *
+     * <p>This is the coordinate an {@link AttackAnchor} is expressed in, so a check keeping its own window
+     * of rotation updates needs it to line the two up.
+     */
+    public long position() {
+        return position;
+    }
+
     /** Records that an attack was observed, anchored at the current rotation-update position. */
     public void onAttackObserved(final int entityId) {
         final AttackAnchor anchor = new AttackAnchor(position, entityId);

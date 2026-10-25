@@ -6,6 +6,7 @@ import cc.watchneko.checks.impl.aim.*;
 import cc.watchneko.checks.impl.aim.processor.AimProcessor;
 import cc.watchneko.checks.impl.aim.processor.Cinematic;
 import cc.watchneko.checks.impl.autoclicker.AutoclickerA;
+import cc.watchneko.checks.impl.analysis.AnalysisA;
 import cc.watchneko.checks.impl.badpackets.*;
 import cc.watchneko.checks.impl.breaking.*;
 import cc.watchneko.checks.impl.chat.ChatA;
@@ -197,6 +198,7 @@ public class CheckManager {
                 .put(AimZ.class, new AimZ(player))
                 .put(AimAA.class, new AimAA(player))
                 .put(AimAB.class, new AimAB(player))
+                .put(AnalysisA.class, new AnalysisA(player))
                 .build();
         vehicleChecks = new ImmutableClassToInstanceMap.Builder<VehicleCheck>()
                 .put(VehiclePredictionRunner.class, new VehiclePredictionRunner(player))
