@@ -56,7 +56,8 @@ def create_app(
     metrics: Metrics | None = None,
     tenant_store=None,
     admin_router=None,
-    static_directory: str | None = None,
+    console_router=None,
+    assets_directory: str | None = None,
 ) -> FastAPI:
     """Build the application.
 
@@ -239,9 +240,12 @@ def create_app(
     if admin_router is not None:
         app.include_router(admin_router)
 
-    if static_directory is not None:
-        # Mounted after the router on purpose: routes match in registration order, so /admin/api/* must be
-        # claimed before the static mount at /admin swallows it.
-        app.mount("/admin", StaticFiles(directory=static_directory, html=True), name="admin")
+    if assets_directory is not None:
+        # Assets live under their own prefix so the page routes can own /admin/{page} without a mount
+        # swallowing them. Registered before the console router for the same reason.
+        app.mount("/admin/assets", StaticFiles(directory=assets_directory), name="admin-assets")
+
+    if console_router is not None:
+        app.include_router(console_router)
 
     return app

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="stack">
+    <div class="section-head">
+        <span class="section-head__title">租户与密钥</span>
+        <button class="btn btn--filled" type="button" id="create-tenant-button">
+            <span class="material-symbols-outlined" aria-hidden="true">add</span>
+            新建租户
+        </button>
+    </div>
+
+    <div class="table-wrap" id="tenant-table">
+        <p class="empty">加载中…</p>
+    </div>
+
+    <p class="card__hint">
+        密钥只在创建或轮换时以明文显示一次。轮换会让旧 key 立即失效，没有重叠期。
+    </p>
+</div>
+{% endblock %}
+{% block script %}
+<script type="module" src="/admin/assets/page-tenants.js"></script>
+{% endblock %}

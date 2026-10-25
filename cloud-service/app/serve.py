@@ -17,6 +17,7 @@ from pathlib import Path
 from app.admin_api import create_admin_router
 from app.admin_auth import AdminAuth
 from app.config import Settings
+from app.console import create_console_router, template_directory
 from app.main import create_app
 from app.metrics import Metrics
 from app.model import ModelRegistry
@@ -76,7 +77,8 @@ def build_service(settings: Settings, trainer_name: str | None = None) -> Servic
 
     admin_auth = None
     admin_router = None
-    static_directory = None
+    console_router = None
+    assets_directory = None
     if settings.has_admin_password:
         admin_auth = AdminAuth(
             username=settings.admin_username,
@@ -92,9 +94,12 @@ def build_service(settings: Settings, trainer_name: str | None = None) -> Servic
             registry=registry,
             ops=cycle,
         )
-        candidate = Path(__file__).parent / "static"
-        if candidate.is_dir():
-            static_directory = str(candidate)
+        pages = template_directory()
+        if pages is not None:
+            console_router = create_console_router(auth=admin_auth, template_directory=pages)
+        assets = Path(__file__).parent / "static"
+        if assets.is_dir():
+            assets_directory = str(assets)
 
     app = create_app(
         registry=registry,
@@ -106,7 +111,8 @@ def build_service(settings: Settings, trainer_name: str | None = None) -> Servic
         tenants=settings.tenants or None,
         tenant_store=tenants,
         admin_router=admin_router,
-        static_directory=static_directory,
+        console_router=console_router,
+        assets_directory=assets_directory,
     )
 
     ops = PeriodicOps(

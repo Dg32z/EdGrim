@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="stack">
+    <div class="section-head">
+        <span class="section-head__title">数据集版本</span>
+    </div>
+
+    <div class="table-wrap" id="dataset-table">
+        <p class="empty">加载中…</p>
+    </div>
+
+    <p class="card__hint">
+        <code>dataset_id</code> 由样本内容决定：样本不变则 id 不变，因此「数据变了吗」是一次字符串比较。
+    </p>
+</div>
+{% endblock %}
+{% block script %}
+<script type="module" src="/admin/assets/page-datasets.js"></script>
+{% endblock %}

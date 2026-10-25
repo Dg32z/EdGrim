@@ -45,10 +45,26 @@ docker compose up -d
 ## 管理控制台
 
 启动后访问 `http://<host>:8000/admin/`。界面用 Material Design 3 的 token 层手写（Web 端的 MD3
-Expressive 组件集并不存在，Material Web 处于维护模式），无构建步骤，由 FastAPI 直接托管静态文件。
+Expressive 组件集并不存在，Material Web 处于维护模式），无构建步骤。
 
-**四个视图**：仪表盘（五类指标 + 裁决分布 + 模型操作）、租户（增删改查 + 密钥轮换/吊销）、
-数据集、模型历史（含回滚状态）。
+**每个视图是一个独立文档，不是一个 SPA。**
+
+| URL | 模板 | 页面脚本 |
+| --- | --- | --- |
+| `/admin/login` | `templates/login.html` | `page-login.js` |
+| `/admin/dashboard` | `templates/dashboard.html` | `page-dashboard.js` |
+| `/admin/tenants` | `templates/tenants.html` | `page-tenants.js` |
+| `/admin/datasets` | `templates/datasets.html` | `page-datasets.js` |
+| `/admin/models` | `templates/models.html` | `page-models.js` |
+
+外壳（导航栏、顶栏）只在 `templates/base.html` 里写一次，四个视图 `{% extends %}` 它——把导航复制
+到五份文档里，就是五个会忘记改的地方。
+
+**会话守卫在服务端**：未登录请求 `/admin/tenants` 拿到的是 303 重定向，页面标记根本不会发到浏览器。
+放在前端做守卫的话，不该拿到的人照样能拿到 HTML。
+
+共用逻辑在 `static/console.js`（API 客户端、对话框、snackbar、DOM 辅助），每个页面只 import 它并渲染
+自己的内容——它不认识「租户」是什么，那是页面脚本的事。
 
 **两种凭据是分开的**，这是刻意的：
 
@@ -80,6 +96,9 @@ Expressive 组件集并不存在，Material Web 处于维护模式），无构�
 ```
 app/
   main.py       三个契约端点 + /metrics；create_app 只接受注入，不自己造依赖
+  console.py    控制台页面路由（服务端会话守卫）
+  templates/    每视图一个文档 + 共用外壳 base.html
+  static/       md3.css、console.js、page-*.js
   schemas.py    线上形状（pydantic），未知字段一律拒绝
   auth.py       租户 API key + server-id；401（不知道你是谁）与 403（知道但无权）分开
   quota.py      按样本数计的滑动窗口，全有或全无
@@ -133,7 +152,7 @@ codesign --force --sign - "$LGB"          # install_name_tool 会破坏签名
 ## 跑测试
 
 ```bash
-.venv/bin/python -m pytest        # 177 个用例
+.venv/bin/python -m pytest        # 187 个用例
 ```
 
 ## 有意保留的限制

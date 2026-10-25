@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>{% block title %}{{ title }}{% endblock %} · WatchNeko</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@400;500;700&family=Roboto+Mono:wght@400&display=swap">
+<link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
+<link rel="stylesheet" href="/admin/assets/md3.css">
+</head>
+<body>
+
+<div class="app">
+    {# Real links, not buttons: every view is its own document, so navigation is a page load. #}
+    <nav class="rail" aria-label="主导航">
+        <div class="rail__brand" aria-hidden="true">WN</div>
+        {% for item in nav %}
+        <a class="rail__item" href="/admin/{{ item.id }}"
+           {% if item.id == active %}aria-current="page"{% endif %}>
+            <span class="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</span>
+            <span>{{ item.label }}</span>
+        </a>
+        {% endfor %}
+    </nav>
+
+    <div class="main">
+        <header class="top-bar">
+            <h1 class="top-bar__title">{% block heading %}{{ title }}{% endblock %}</h1>
+            <button class="btn btn--text btn--small" id="refresh-button" type="button">
+                <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+                刷新
+            </button>
+            <button class="btn btn--text btn--small" id="logout-button" type="button">
+                <span class="material-symbols-outlined" aria-hidden="true">logout</span>
+                退出
+            </button>
+        </header>
+
+        <main class="content" id="content" tabindex="-1">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+<div id="overlay-root"></div>
+
+<script type="module" src="/admin/assets/console.js"></script>
+{% block script %}{% endblock %}
+</body>
+</html>
