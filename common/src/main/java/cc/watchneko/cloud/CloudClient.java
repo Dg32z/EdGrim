@@ -113,7 +113,7 @@ public final class CloudClient {
     private static void requireOk(CloudResponse response, String operation) {
         if (response.status() != 200) {
             throw new CloudContractException(
-                    operation + " answered " + response.status() + ": " + response.body());
+                    response.status(), operation + " answered " + response.status() + ": " + response.body());
         }
     }
 }

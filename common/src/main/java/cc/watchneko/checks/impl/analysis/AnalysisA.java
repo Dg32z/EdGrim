@@ -4,6 +4,7 @@ import ac.grim.grimac.api.config.ConfigManager;
 import cc.watchneko.checks.Check;
 import cc.watchneko.checks.CheckData;
 import cc.watchneko.checks.type.RotationCheck;
+import cc.watchneko.cloud.CloudContractException;
 import cc.watchneko.cloud.FeatureSample;
 import cc.watchneko.cloud.InferenceResult;
 import cc.watchneko.cloud.Verdict;
@@ -48,6 +49,10 @@ public final class AnalysisA extends Check implements RotationCheck, AttackSigna
     private VerdictVotes votes = new VerdictVotes(10, 6);
     private boolean inFlight;
     private boolean debugLog;
+    private boolean quotaGated;
+    private long quotaGateUntilMs;
+    private double gateMinEnergy = 1.25;
+    private long quotaCooldownMs = 30_000L;
     private int batchSize = 8;
     private long sampleCounter;
 
@@ -60,6 +65,8 @@ public final class AnalysisA extends Check implements RotationCheck, AttackSigna
     public void onReload(final ConfigManager config) {
         debugLog = config.getBooleanElse("AnalysisA.debug-log", false);
         batchSize = Math.max(1, config.getIntElse("AnalysisA.batch-size", 8));
+        gateMinEnergy = Math.max(0.0, config.getDoubleElse("AnalysisA.local-gate-min-energy", 1.25));
+        quotaCooldownMs = Math.max(1L, config.getIntElse("AnalysisA.quota-cooldown-ms", 30_000));
 
         final int windowSize = Math.max(1, config.getIntElse("AnalysisA.analysis-window-size", 10));
         final int minCheatVotes = Math.max(1, config.getIntElse("AnalysisA.min-cheat-votes", 6));
@@ -87,6 +94,11 @@ public final class AnalysisA extends Check implements RotationCheck, AttackSigna
             return;
         }
 
+        if (quotaGated && System.currentTimeMillis() >= quotaGateUntilMs) {
+            // Try full throughput again; the cloud answers 429 again if there is still no room.
+            quotaGated = false;
+        }
+
         window.append(player.rotationSequence.position(), update.getDeltaXRot(), update.getDeltaYRot());
         collectCompletedSamples(gateway);
         drainVerdicts();
@@ -96,16 +108,25 @@ public final class AnalysisA extends Check implements RotationCheck, AttackSigna
     private void collectCompletedSamples(final CloudGateway gateway) {
         while (!pendingAnchors.isEmpty()) {
             final long center = pendingAnchors.peekFirst();
-            final Optional<double[]> features = window.extract(center);
-            if (features.isEmpty()) {
+            final Optional<RotationWindow.ExtractedWindow> extracted = window.extract(center);
+            if (extracted.isEmpty()) {
                 return;
             }
 
             pendingAnchors.removeFirst();
+
+            // Under quota pressure only the samples that actually moved get sent. A window with no
+            // movement says nothing about aim, so dropping it loses no detection power - and unlike
+            // dropping arbitrary samples, it does not bias what the cloud sees.
+            if (quotaGated && extracted.get().energy() < gateMinEnergy) {
+                debug("dropped a still window while quota-gated (energy=" + extracted.get().energy() + ")");
+                continue;
+            }
+
             final FeatureSample sample = new FeatureSample(
                     player.uuid + "-" + (++sampleCounter),
                     gateway.playerHash(player.uuid),
-                    features.get());
+                    extracted.get().features());
 
             // A player being recorded is producing training data, not evidence. The sample goes to the
             // session and is not sent for inference: a recording session must never influence the
@@ -132,6 +153,10 @@ public final class AnalysisA extends Check implements RotationCheck, AttackSigna
         gateway.inferAsync(outgoing).whenComplete((result, error) -> {
             inFlight = false;
             if (error != null) {
+                if (error.getCause() instanceof CloudContractException contract
+                        && contract.status() == 429) {
+                    enterQuotaGate();
+                }
                 debug("cloud call failed, dropping " + outgoing.size() + " samples: " + error.getMessage());
                 return;
             }
@@ -159,6 +184,18 @@ public final class AnalysisA extends Check implements RotationCheck, AttackSigna
         if (flagAndAlert("cloud votes=" + votes.cheatVotes() + "/" + votes.size())) {
             votes.clear();
         }
+    }
+
+    /**
+     * Over quota: stop sending everything and send only what still carries signal.
+     *
+     * <p>A 429 is not an outage, so it must not disable detection; it is an instruction to send less. The
+     * gate reopens on a timer rather than on a signal, because the service does not tell us when capacity
+     * returns — the cheapest correct answer is to try again and be told.
+     */
+    private void enterQuotaGate() {
+        quotaGated = true;
+        quotaGateUntilMs = System.currentTimeMillis() + quotaCooldownMs;
     }
 
     private void debug(final String message) {

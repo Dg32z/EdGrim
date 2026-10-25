@@ -1,0 +1,75 @@
+"""Quota at the endpoint: over the limit is a 429, and a 429 is not evidence."""
+
+from __future__ import annotations
+
+from fastapi.testclient import TestClient
+
+from app.auth import Tenant
+from app.main import create_app
+from app.quota import QuotaLimiter
+
+SURVIVAL = Tenant(tenant_id="t-survival", api_key="key-survival", servers=frozenset({"survival-1"}))
+HEADERS = {"authorization": "Bearer key-survival", "x-server-id": "survival-1"}
+
+
+def inference_body(count: int) -> dict:
+    return {
+        "contract_version": 1,
+        "samples": [
+            {"sample_id": f"s{i}", "player_hash": "hash-a", "features": [0.0] * 22}
+            for i in range(count)
+        ],
+    }
+
+
+def test_a_request_within_quota_gets_verdicts() -> None:
+    client = TestClient(create_app(tenants=[SURVIVAL], quota=QuotaLimiter(samples_per_minute=10)))
+
+    response = client.post("/v1/inference", json=inference_body(5), headers=HEADERS)
+
+    assert response.status_code == 200
+    assert len(response.json()["verdicts"]) == 5
+
+
+def test_a_request_over_quota_is_refused_with_the_error_envelope() -> None:
+    client = TestClient(create_app(tenants=[SURVIVAL], quota=QuotaLimiter(samples_per_minute=10)))
+
+    response = client.post("/v1/inference", json=inference_body(11), headers=HEADERS)
+
+    assert response.status_code == 429
+    assert response.json()["error"] == "quota_exceeded"
+    assert "verdicts" not in response.json(), "a refused request must not carry verdicts"
+
+
+def test_a_refused_request_does_not_spend_quota() -> None:
+    quota = QuotaLimiter(samples_per_minute=10)
+    client = TestClient(create_app(tenants=[SURVIVAL], quota=quota))
+
+    client.post("/v1/inference", json=inference_body(11), headers=HEADERS)
+
+    assert quota.used("t-survival") == 0
+    assert client.post("/v1/inference", json=inference_body(10), headers=HEADERS).status_code == 200
+
+
+def test_quota_is_counted_per_tenant() -> None:
+    other = Tenant(tenant_id="t-other", api_key="key-other", servers=frozenset({"other-1"}))
+    client = TestClient(
+        create_app(tenants=[SURVIVAL, other], quota=QuotaLimiter(samples_per_minute=10))
+    )
+
+    client.post("/v1/inference", json=inference_body(10), headers=HEADERS)
+    blocked = client.post("/v1/inference", json=inference_body(1), headers=HEADERS)
+    allowed = client.post(
+        "/v1/inference",
+        json=inference_body(10),
+        headers={"authorization": "Bearer key-other", "x-server-id": "other-1"},
+    )
+
+    assert blocked.status_code == 429
+    assert allowed.status_code == 200
+
+
+def test_no_quota_configured_means_no_limit() -> None:
+    client = TestClient(create_app(tenants=[SURVIVAL]))
+
+    assert client.post("/v1/inference", json=inference_body(500), headers=HEADERS).status_code == 200

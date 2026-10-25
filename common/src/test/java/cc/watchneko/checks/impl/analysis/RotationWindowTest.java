@@ -41,15 +41,15 @@ class RotationWindowTest {
     void aWindowCompletesOnceFiveUpdatesFollowTheAnchor() {
         final RotationWindow window = filledTo(RotationWindow.WINDOW_SIZE);
 
-        final Optional<double[]> features = window.extract(FIRST_CENTRE);
+        final Optional<RotationWindow.ExtractedWindow> features = window.extract(FIRST_CENTRE);
         assertTrue(features.isPresent(), "eleven updates with the anchor centred");
-        assertEquals(RotationWindow.FEATURE_DIMENSIONS, features.get().length);
+        assertEquals(RotationWindow.FEATURE_DIMENSIONS, features.get().features().length);
     }
 
     @Test
     void featuresAreNormalisedIntoTheUnitRange() {
         final RotationWindow window = filledTo(RotationWindow.WINDOW_SIZE);
-        final double[] features = window.extract(FIRST_CENTRE).orElseThrow();
+        final double[] features = window.extract(FIRST_CENTRE).orElseThrow().features();
 
         for (final double value : features) {
             assertTrue(value >= -1.0 && value <= 1.0, "feature out of range: " + value);
@@ -59,7 +59,7 @@ class RotationWindowTest {
     @Test
     void theLargestDeltaOfEachAxisBecomesUnitMagnitude() {
         final RotationWindow window = filledTo(RotationWindow.WINDOW_SIZE);
-        final double[] features = window.extract(FIRST_CENTRE).orElseThrow();
+        final double[] features = window.extract(FIRST_CENTRE).orElseThrow().features();
 
         boolean sawYawUnit = false;
         boolean sawPitchUnit = false;
@@ -102,7 +102,7 @@ class RotationWindowTest {
         for (int i = 1; i <= RotationWindow.WINDOW_SIZE; i++) {
             window.append(i, 0.0F, 0.0F);
         }
-        final double[] features = window.extract(FIRST_CENTRE).orElseThrow();
+        final double[] features = window.extract(FIRST_CENTRE).orElseThrow().features();
         for (final double value : features) {
             assertEquals(0.0, value, "no movement normalises to zero, not NaN");
             assertFalse(Double.isNaN(value));

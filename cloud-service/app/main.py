@@ -15,6 +15,7 @@ from fastapi.responses import JSONResponse
 
 from app.auth import Tenant, TenantRegistry
 from app.model import ModelRegistry, Scorer, StubScorer, classify
+from app.quota import QuotaLimiter
 from app.schemas import (
     CONTRACT_VERSION,
     ErrorResponse,
@@ -26,6 +27,15 @@ from app.schemas import (
     Verdict,
 )
 from app.store import SampleStore
+
+
+def _quota_exceeded() -> JSONResponse:
+    return JSONResponse(
+        status_code=429,
+        content=ErrorResponse(
+            contract_version=CONTRACT_VERSION, error="quota_exceeded"
+        ).model_dump(),
+    )
 
 
 def _no_model() -> JSONResponse:
@@ -40,6 +50,7 @@ def create_app(
     scorer: Scorer | None = None,
     tenants: list[Tenant] | None = None,
     store: SampleStore | None = None,
+    quota: QuotaLimiter | None = None,
 ) -> FastAPI:
     """Build the application.
 
@@ -51,6 +62,7 @@ def create_app(
     active_scorer = scorer if scorer is not None else StubScorer()
     tenant_registry = TenantRegistry(tenants) if tenants is not None else None
     sample_store = store if store is not None else SampleStore()
+    active_quota = quota
 
     app = FastAPI(title="WatchNeko cloud", version=str(CONTRACT_VERSION))
     app.state.store = sample_store
@@ -97,6 +109,11 @@ def create_app(
         responses={404: {"model": ErrorResponse}, 401: {"model": ErrorResponse}},
     )
     def infer(payload: InferenceRequest, tenant_id: str = Depends(authenticate)):
+        if active_quota is not None and not active_quota.try_consume(tenant_id, len(payload.samples)):
+            # Over quota is not evidence of anything: the plugin treats this exactly like an outage and
+            # stops sending, so no verdict is produced and no violation can result.
+            return _quota_exceeded()
+
         model = active_registry.current()
         if model is None:
             # The plugin never gets here: a cold start disables the check before it sends anything.

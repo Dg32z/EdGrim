@@ -36,6 +36,20 @@ public final class RotationWindow {
     private record Frame(long sequence, float deltaYaw, float deltaPitch) {
     }
 
+    /**
+     * One complete window: the normalised vector that goes on the wire, plus the raw movement energy that
+     * stays local.
+     *
+     * <p>The energy is kept because it is the cheap, local answer to "is this sample even worth sending" —
+     * a window where nothing moved carries no information about aim, and under quota pressure it is the
+     * first thing that can be dropped without losing anything.
+     *
+     * @param features the {@link #FEATURE_DIMENSIONS} normalised values
+     * @param energy   sum of absolute yaw and pitch deltas across the window, in degrees
+     */
+    public record ExtractedWindow(double[] features, double energy) {
+    }
+
     private final Deque<Frame> frames = new ArrayDeque<>(CAPACITY);
 
     /** Records one rotation update at the given sequence position. */
@@ -59,7 +73,7 @@ public final class RotationWindow {
      * because the anchor is unknown to this buffer, or because fewer than {@link #RADIUS} rotation updates
      * have arrived after it.
      */
-    public Optional<double[]> extract(final long centerSequence) {
+    public Optional<ExtractedWindow> extract(final long centerSequence) {
         final Frame[] all = frames.toArray(new Frame[0]);
         int center = -1;
         for (int i = 0; i < all.length; i++) {
@@ -75,9 +89,13 @@ public final class RotationWindow {
 
         double maxYaw = 0.0;
         double maxPitch = 0.0;
+        double energy = 0.0;
         for (int i = center - RADIUS; i <= center + RADIUS; i++) {
-            maxYaw = Math.max(maxYaw, Math.abs(all[i].deltaYaw()));
-            maxPitch = Math.max(maxPitch, Math.abs(all[i].deltaPitch()));
+            final double yaw = Math.abs(all[i].deltaYaw());
+            final double pitch = Math.abs(all[i].deltaPitch());
+            maxYaw = Math.max(maxYaw, yaw);
+            maxPitch = Math.max(maxPitch, pitch);
+            energy += yaw + pitch;
         }
 
         final double yawDenominator = Math.max(maxYaw, EPSILON);
@@ -89,6 +107,6 @@ public final class RotationWindow {
             features[out++] = all[i].deltaYaw() / yawDenominator;
             features[out++] = all[i].deltaPitch() / pitchDenominator;
         }
-        return Optional.of(features);
+        return Optional.of(new ExtractedWindow(features, energy));
     }
 }

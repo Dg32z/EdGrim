@@ -9,7 +9,20 @@ package cc.watchneko.cloud;
  */
 public class CloudContractException extends RuntimeException {
 
-    public CloudContractException(String message) {
+    private final int status;
+
+    public CloudContractException(int status, String message) {
         super(message);
+        this.status = status;
+    }
+
+    /**
+     * The HTTP status the cloud answered with.
+     *
+     * <p>Carried because "over quota" (429) is not a failure the caller should treat like an outage: it
+     * means back off and send less, not that something is broken.
+     */
+    public int status() {
+        return status;
     }
 }
