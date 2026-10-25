@@ -1,0 +1,26 @@
+{
+    "case": "model_metadata",
+    "description": "模型元数据：插件启动时拉取当前生效的模型版本、可追溯的数据集版本与分类阈值。",
+    "request": {
+        "method": "GET",
+        "path": "/v1/model",
+        "headers": {
+            "authorization": "Bearer test-tenant-key",
+            "x-server-id": "survival-1"
+        },
+        "body": null
+    },
+    "response": {
+        "status": 200,
+        "body": {
+            "contract_version": 1,
+            "model_id": "m-0001",
+            "dataset_id": "ds-0001",
+            "feature_dimensions": 22,
+            "thresholds": {
+                "cheat_like": 0.7,
+                "legit_like": 0.3
+            }
+        }
+    }
+}

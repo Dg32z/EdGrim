@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "watchneko-cloud-service"
+version = "0.1.0"
+description = "WatchNeko cloud service: inference, sample upload and model metadata."
+requires-python = ">=3.11"
+
+[tool.setuptools]
+packages = ["app"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

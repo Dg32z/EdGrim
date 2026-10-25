@@ -42,6 +42,8 @@ dependencies {
     // Bump snakeyaml (transitive dep of configuralize) 1.29 -> 2.2 for geyser-fabric
     api("org.yaml:snakeyaml:2.2")
     api(libs.fastutil)
+    // The cloud contract's wire format is JSON; see contract/README.md.
+    implementation(libs.gson)
     api(libs.adventure.text.minimessage)
     api(libs.jetbrains.annotations)
     api("com.zaxxer:HikariCP:4.0.3")

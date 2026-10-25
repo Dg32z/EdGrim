@@ -69,6 +69,14 @@ nb-configuration.xml
 .DS_Store
 
 ##############################
+## Python (cloud-service)
+##############################
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+##############################
 ## Claude Code
 ##############################
 .claude/

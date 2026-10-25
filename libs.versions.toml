@@ -8,6 +8,7 @@ cloud = "2.0.0"
 cloud-paper = "2.0.0-beta.11"
 packetevents = "2.9.6+4519ccba2-SNAPSHOT"
 fastutil = "8.5.15"
+gson = "2.11.0"
 jetbrains-annotations = "24.1.0"
 floodgate-api = "2.0-SNAPSHOT"
 via-version = "5.0.4-SNAPSHOT"
@@ -23,6 +24,7 @@ adventure-text-minimessage = { group = "net.kyori", name = "adventure-text-minim
 adventure-platform-bukkit = { group = "net.kyori", name = "adventure-platform-bukkit", version.ref = "adventure-platform-bukkit" }
 jetbrains-annotations = { group = "org.jetbrains", name = "annotations", version.ref = "jetbrains-annotations" }
 fastutil = { group = "it.unimi.dsi", name = "fastutil", version.ref = "fastutil" }
+gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 netty = { group = "io.netty", name = "netty-all", version.ref = "netty" }
 junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junit" }
 junit-platform-launcher = { group = "org.junit.platform", name = "junit-platform-launcher", version = "1.11.4" }
