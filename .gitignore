@@ -91,3 +91,6 @@ fabric/run/
 /hack
 /.VSCodeCounter
 /javapluginsLightningGrim-temp
+
+# git worktrees used during implementation
+.worktrees/

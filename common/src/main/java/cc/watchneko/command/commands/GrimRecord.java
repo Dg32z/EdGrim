@@ -26,7 +26,7 @@ import java.util.UUID;
  *
  * <pre>
  *   /watchneko record start &lt;player&gt; &lt;cheat|legit&gt;
- *   /watchneko record stop  &lt;upload|discard&gt;
+ *   /watchneko record stop  &lt;player&gt; &lt;upload|discard&gt;
  * </pre>
  *
  * <p>The label is chosen before recording rather than after, because the admin knows what they are about to
@@ -56,6 +56,7 @@ public class GrimRecord implements BuildableCommand {
                         .literal("record")
                         .literal("stop")
                         .permission(PERMISSION)
+                        .required("target", WatchNekoAPI.INSTANCE.getCommandAdapter().singlePlayerSelectorParser())
                         .required("action", StringParser.stringParser())
                         .handler(this::handleStop));
     }
@@ -106,17 +107,17 @@ public class GrimRecord implements BuildableCommand {
         final Sender sender = context.sender();
         final String action = String.valueOf(context.<String>get("action")).toLowerCase(Locale.ROOT);
 
-        final Optional<PlatformPlayer> self = Optional.ofNullable(sender.getPlatformPlayer());
-        if (self.isEmpty()) {
-            sender.sendMessage(Component.text(
-                    "Run this from in-game so the recorded player can be identified.",
-                    NamedTextColor.RED));
+        // Keyed by the player being recorded, not by whoever ran the command: an admin recording someone
+        // else must still be able to end that session.
+        final PlatformPlayer target = resolveTarget(context, sender);
+        if (target == null) {
             return;
         }
 
-        final Optional<RecordingSession> ended = RecordingSessions.stop(self.get().getUniqueId());
+        final Optional<RecordingSession> ended = RecordingSessions.stop(target.getUniqueId());
         if (ended.isEmpty()) {
-            sender.sendMessage(Component.text("You are not recording anyone.", NamedTextColor.RED));
+            sender.sendMessage(Component.text(
+                    target.getName() + " is not being recorded.", NamedTextColor.RED));
             return;
         }
 
