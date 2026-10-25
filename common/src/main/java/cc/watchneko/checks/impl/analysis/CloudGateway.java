@@ -6,7 +6,9 @@ import cc.watchneko.cloud.CloudSettings;
 import cc.watchneko.cloud.CloudTransport;
 import cc.watchneko.cloud.FeatureSample;
 import cc.watchneko.cloud.InferenceResult;
+import cc.watchneko.cloud.Label;
 import cc.watchneko.cloud.ModelMetadata;
+import cc.watchneko.cloud.SampleUploadResult;
 import cc.watchneko.utils.anticheat.LogUtil;
 
 import java.nio.charset.StandardCharsets;
@@ -182,6 +184,13 @@ public final class CloudGateway {
     /** Sends a batch off the packet thread. */
     public CompletableFuture<InferenceResult> inferAsync(final List<FeatureSample> samples) {
         return CompletableFuture.supplyAsync(() -> client.infer(samples), EXECUTOR);
+    }
+
+    /** Uploads one recording session's labelled batch off the calling thread. */
+    public CompletableFuture<SampleUploadResult> uploadAsync(
+            final String sessionId, final Label label, final List<FeatureSample> samples) {
+        return CompletableFuture.supplyAsync(
+                () -> client.uploadSamples(sessionId, label, samples), EXECUTOR);
     }
 
     /**

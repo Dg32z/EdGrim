@@ -102,10 +102,21 @@ public final class AnalysisA extends Check implements RotationCheck, AttackSigna
             }
 
             pendingAnchors.removeFirst();
-            batch.add(new FeatureSample(
+            final FeatureSample sample = new FeatureSample(
                     player.uuid + "-" + (++sampleCounter),
                     gateway.playerHash(player.uuid),
-                    features.get()));
+                    features.get());
+
+            // A player being recorded is producing training data, not evidence. The sample goes to the
+            // session and is not sent for inference: a recording session must never influence the
+            // detection it is meant to help train.
+            final Optional<RecordingSession> recording = RecordingSessions.active(player.uuid);
+            if (recording.isPresent()) {
+                recording.get().add(sample);
+                continue;
+            }
+
+            batch.add(sample);
         }
     }
 

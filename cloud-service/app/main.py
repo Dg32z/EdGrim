@@ -1,15 +1,19 @@
 """The endpoints of the plugin's contract, as a FastAPI application.
 
-Shapes only: no storage, no real inference, no authentication. Those arrive in tickets #11-#16 without
-changing anything the shared corpus pins.
+Inference and the contract shapes arrived in #11; storage, authentication and retention are #13's. Nothing
+here changes what the shared corpus in ``contract/fixtures`` pins.
+
+The registry, scorer, tenant list and store are all constructor arguments rather than globals, so every
+policy this service enforces can be exercised from a test without patching module state.
 """
 
 from __future__ import annotations
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Header, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from app.auth import Tenant, TenantRegistry
 from app.model import ModelRegistry, Scorer, StubScorer, classify
 from app.schemas import (
     CONTRACT_VERSION,
@@ -21,6 +25,7 @@ from app.schemas import (
     SampleUploadResponse,
     Verdict,
 )
+from app.store import SampleStore
 
 
 def _no_model() -> JSONResponse:
@@ -33,16 +38,30 @@ def _no_model() -> JSONResponse:
 def create_app(
     registry: ModelRegistry | None = None,
     scorer: Scorer | None = None,
+    tenants: list[Tenant] | None = None,
+    store: SampleStore | None = None,
 ) -> FastAPI:
     """Build the application.
 
-    The registry and the scorer are injected so the cold-start path is a plain constructor argument
-    rather than a global to poke at from a test.
+    ``tenants`` being ``None`` means authentication is not configured, and every caller is treated as one
+    local tenant. That is the development posture only: a deployment that accepts uploads from other people
+    must configure tenants, because otherwise anyone who can reach the port can write into the dataset.
     """
     active_registry = registry if registry is not None else ModelRegistry.with_default_model()
     active_scorer = scorer if scorer is not None else StubScorer()
+    tenant_registry = TenantRegistry(tenants) if tenants is not None else None
+    sample_store = store if store is not None else SampleStore()
 
     app = FastAPI(title="WatchNeko cloud", version=str(CONTRACT_VERSION))
+    app.state.store = sample_store
+
+    def authenticate(
+        authorization: str | None = Header(default=None),
+        x_server_id: str | None = Header(default=None),
+    ) -> str:
+        if tenant_registry is None:
+            return "local"
+        return tenant_registry.authenticate(authorization, x_server_id)
 
     @app.exception_handler(RequestValidationError)
     async def invalid_request(request: Request, exc: RequestValidationError) -> JSONResponse:
@@ -55,8 +74,12 @@ def create_app(
             ).model_dump(),
         )
 
-    @app.get("/v1/model", response_model=ModelMetadata, responses={404: {"model": ErrorResponse}})
-    def model_metadata():
+    @app.get(
+        "/v1/model",
+        response_model=ModelMetadata,
+        responses={404: {"model": ErrorResponse}, 401: {"model": ErrorResponse}},
+    )
+    def model_metadata(tenant_id: str = Depends(authenticate)):
         model = active_registry.current()
         if model is None:
             return _no_model()
@@ -71,9 +94,9 @@ def create_app(
     @app.post(
         "/v1/inference",
         response_model=InferenceResponse,
-        responses={404: {"model": ErrorResponse}},
+        responses={404: {"model": ErrorResponse}, 401: {"model": ErrorResponse}},
     )
-    def infer(payload: InferenceRequest):
+    def infer(payload: InferenceRequest, tenant_id: str = Depends(authenticate)):
         model = active_registry.current()
         if model is None:
             # The plugin never gets here: a cold start disables the check before it sends anything.
@@ -96,14 +119,47 @@ def create_app(
             verdicts=verdicts,
         )
 
-    @app.post("/v1/samples", response_model=SampleUploadResponse)
-    def upload_samples(payload: SampleUploadRequest) -> SampleUploadResponse:
-        # Storage is ticket #14. The contract phase owes a receipt that accounts for every sample sent.
+    @app.post(
+        "/v1/samples",
+        response_model=SampleUploadResponse,
+        responses={401: {"model": ErrorResponse}, 403: {"model": ErrorResponse}},
+    )
+    def upload_samples(
+        payload: SampleUploadRequest,
+        tenant_id: str = Depends(authenticate),
+        x_server_id: str | None = Header(default=None),
+    ) -> SampleUploadResponse:
+        accepted, rejected = sample_store.record(
+            tenant_id=tenant_id,
+            server_id=x_server_id or "local",
+            session_id=payload.recording_session_id,
+            label=payload.label.value,
+            samples=[sample.model_dump() for sample in payload.samples],
+        )
+
         return SampleUploadResponse(
             contract_version=CONTRACT_VERSION,
             recording_session_id=payload.recording_session_id,
-            accepted=len(payload.samples),
-            rejected=0,
+            accepted=accepted,
+            rejected=rejected,
         )
+
+    @app.delete("/v1/samples/{player_hash}")
+    def delete_player_samples(
+        player_hash: str,
+        tenant_id: str = Depends(authenticate),
+    ) -> dict:
+        """Delete every sample belonging to one player, within the caller's own tenant.
+
+        Scoped to the authenticated tenant on purpose: a server owner fulfilling a player's deletion
+        request should not be able to reach into anyone else's data, and the hash is already tenant-salted
+        so it cannot address another tenant's player anyway.
+        """
+        removed = sample_store.delete_player(tenant_id=tenant_id, player_hash=player_hash)
+        return {
+            "contract_version": CONTRACT_VERSION,
+            "player_hash": player_hash,
+            "deleted": removed,
+        }
 
     return app
