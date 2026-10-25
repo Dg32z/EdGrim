@@ -163,19 +163,66 @@ export async function confirmDialog(title, message, confirmLabel, danger = false
     return value === true;
 }
 
+/**
+ * Copies text, with fallbacks.
+ *
+ * `navigator.clipboard` only exists in a secure context — HTTPS or localhost. A console reached over
+ * `http://<ip>:8000` is not secure, so the modern API is simply absent there and the first attempt throws.
+ * `execCommand('copy')` still works in that situation, deprecated as it is; and if even that fails, the text
+ * gets selected so the operator can press Ctrl+C. A copy button that only works over HTTPS is a copy button
+ * that does not work on the deployment it ships with.
+ */
+async function copyText(text, sourceNode) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+            await navigator.clipboard.writeText(text);
+            return true;
+        } catch {
+            // Permission denied or insecure context: fall through.
+        }
+    }
+
+    try {
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.setAttribute('readonly', '');
+        area.style.position = 'fixed';
+        area.style.top = '-1000px';
+        area.style.opacity = '0';
+        document.body.append(area);
+        area.select();
+        const copied = document.execCommand('copy');
+        area.remove();
+        if (copied) return true;
+    } catch {
+        // Fall through to selecting the text.
+    }
+
+    if (sourceNode) {
+        const range = document.createRange();
+        range.selectNodeContents(sourceNode);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+    }
+    return false;
+}
+
 /** Shows a freshly minted API key. It is never retrievable again, so the dialog says so. */
 export async function revealKey(tenantId, apiKey) {
+    const secretNode = h('div', { class: 'secret', text: apiKey });
+
     const copyButton = h(
         'button',
         {
             class: 'btn btn--tonal',
             type: 'button',
             onclick: async () => {
-                try {
-                    await navigator.clipboard.writeText(apiKey);
+                const copied = await copyText(apiKey, secretNode);
+                if (copied) {
                     toast('已复制到剪贴板');
-                } catch {
-                    toast('复制失败，请手动选中', 'error');
+                } else {
+                    toast('浏览器禁止自动复制，密钥已选中，请按 Ctrl+C', 'error');
                 }
             },
         },
@@ -189,7 +236,7 @@ export async function revealKey(tenantId, apiKey) {
             'div',
             {},
             h('p', { text: '这是该密钥唯一一次以明文显示。关闭后只能重新轮换，无法再查看。' }),
-            h('div', { class: 'secret', text: apiKey }),
+            secretNode,
             h('p', { class: 'card__hint', text: '填入插件 config.yml 的 AnalysisA.cloud.api-key。' }),
             copyButton,
         ),
