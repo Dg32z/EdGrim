@@ -210,6 +210,18 @@ def train_model(dataset: Dataset, trainer: Trainer) -> TrainedModel:
     )
 
 
+def predictor_from_artifact(artifact: dict) -> Predictor:
+    """Rebuild a scorer from a published artifact.
+
+    Only the logistic artifact is reconstructible today. A LightGBM artifact would need the booster parsed
+    back out of its model string, which is ticket-worthy work of its own; until then that backend publishes
+    a model the service cannot serve, and saying so is better than pretending otherwise.
+    """
+    if artifact.get("kind") != "logistic":
+        raise ValueError(f"cannot rebuild a scorer from artifact kind {artifact.get('kind')!r}")
+    return _LogisticPredictor(list(artifact["weights"]), float(artifact["bias"]))
+
+
 def artifact_bytes(model: TrainedModel) -> bytes:
     """The model file, as it would be written to disk."""
     return json.dumps(

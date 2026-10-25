@@ -47,10 +47,15 @@ DEFAULT_MODEL = Model(
 
 
 class ModelRegistry:
-    """The model currently in effect, or nothing at all on a fresh deployment."""
+    """The model currently in effect, or nothing at all on a fresh deployment.
 
-    def __init__(self, model: Model | None = None) -> None:
+    The scorer travels with the model: publication and rollback both move the pointer *and* the thing that
+    answers, so serving can never drift from what the metrics claim is live.
+    """
+
+    def __init__(self, model: Model | None = None, scorer: Scorer | None = None) -> None:
         self._model = model
+        self._scorer = scorer
 
     @classmethod
     def with_default_model(cls) -> "ModelRegistry":
@@ -63,6 +68,17 @@ class ModelRegistry:
 
     def current(self) -> Model | None:
         return self._model
+
+    def scorer(self) -> Scorer:
+        return self._scorer if self._scorer is not None else StubScorer()
+
+    def set(self, model: Model, scorer: Scorer) -> None:
+        self._model = model
+        self._scorer = scorer
+
+    def clear(self) -> None:
+        self._model = None
+        self._scorer = None
 
 
 def classify(score: float, thresholds: Thresholds) -> VerdictLabel:

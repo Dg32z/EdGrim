@@ -11,10 +11,11 @@ from __future__ import annotations
 
 from fastapi import Depends, FastAPI, Header, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 
 from app.auth import Tenant, TenantRegistry
 from app.model import ModelRegistry, Scorer, StubScorer, classify
+from app.metrics import Metrics
 from app.quota import QuotaLimiter
 from app.schemas import (
     CONTRACT_VERSION,
@@ -51,6 +52,7 @@ def create_app(
     tenants: list[Tenant] | None = None,
     store: SampleStore | None = None,
     quota: QuotaLimiter | None = None,
+    metrics: Metrics | None = None,
 ) -> FastAPI:
     """Build the application.
 
@@ -63,6 +65,7 @@ def create_app(
     tenant_registry = TenantRegistry(tenants) if tenants is not None else None
     sample_store = store if store is not None else SampleStore()
     active_quota = quota
+    active_metrics = metrics if metrics is not None else Metrics()
 
     app = FastAPI(title="WatchNeko cloud", version=str(CONTRACT_VERSION))
     app.state.store = sample_store
@@ -109,6 +112,8 @@ def create_app(
         responses={404: {"model": ErrorResponse}, 401: {"model": ErrorResponse}},
     )
     def infer(payload: InferenceRequest, tenant_id: str = Depends(authenticate)):
+        active_metrics.record_request()
+
         if active_quota is not None and not active_quota.try_consume(tenant_id, len(payload.samples)):
             # Over quota is not evidence of anything: the plugin treats this exactly like an outage and
             # stops sending, so no verdict is produced and no violation can result.
@@ -130,11 +135,23 @@ def create_app(
                 )
             )
 
+        active_metrics.record_samples(tenant_id, len(payload.samples))
+        active_metrics.record_verdicts([verdict.verdict.value for verdict in verdicts])
+
         return InferenceResponse(
             contract_version=CONTRACT_VERSION,
             model_id=model.model_id,
             verdicts=verdicts,
         )
+
+    @app.get("/metrics", response_class=PlainTextResponse, include_in_schema=False)
+    def prometheus_metrics() -> PlainTextResponse:
+        """Prometheus scrape target.
+
+        Unauthenticated on purpose: it is scraped by the operator's own monitoring, carries no player data,
+        and putting the tenant key in front of it would only mean duplicating the key into a second place.
+        """
+        return PlainTextResponse(active_metrics.render())
 
     @app.post(
         "/v1/samples",
