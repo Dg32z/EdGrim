@@ -12,6 +12,7 @@ jetbrains-annotations = "24.1.0"
 floodgate-api = "2.0-SNAPSHOT"
 via-version = "5.0.4-SNAPSHOT"
 netty = "4.1.85.Final"
+junit = "5.11.4"
 
 spotless = "6.25.0"
 lombok = "9.0.0"
@@ -23,6 +24,8 @@ adventure-platform-bukkit = { group = "net.kyori", name = "adventure-platform-bu
 jetbrains-annotations = { group = "org.jetbrains", name = "annotations", version.ref = "jetbrains-annotations" }
 fastutil = { group = "it.unimi.dsi", name = "fastutil", version.ref = "fastutil" }
 netty = { group = "io.netty", name = "netty-all", version.ref = "netty" }
+junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junit" }
+junit-platform-launcher = { group = "org.junit.platform", name = "junit-platform-launcher", version = "1.11.4" }
 via-version-api = { group = "com.viaversion", name = "viaversion-api", version.ref = "via-version" }
 floodgate-api = { group = "org.geysermc.floodgate", name = "api", version.ref = "floodgate-api" }
 paper-api = { group = "io.papermc.paper", name = "paper-api", version.ref = "paper-api" }

@@ -82,9 +82,11 @@ public class CheckManager {
     private final ClassToInstanceMap<BlockBreakCheck> blockBreakChecks;
     private final ClassToInstanceMap<BlockPlaceCheck> blockPlaceChecks;
     private final ClassToInstanceMap<PostPredictionCheck> postPredictionChecks;
+    private final PlayerData player;
     private PacketEntityReplication packetEntityReplication = null;
 
     public CheckManager(PlayerData player) {
+        this.player = player;
         packetChecks = new ImmutableClassToInstanceMap.Builder<PacketCheck>()
                 .put(PacketOrderProcessor.class, player.packetOrderProcessor)
                 .put(Reach.class, new Reach(player))
@@ -394,6 +396,7 @@ public class CheckManager {
     }
 
     public void onRotationUpdate(final RotationUpdate rotation) {
+        player.rotationSequence.onRotationUpdate(rotation);
         for (RotationCheck check : rotationChecks.values()) {
             check.process(rotation);
         }
