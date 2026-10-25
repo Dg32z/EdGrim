@@ -54,9 +54,56 @@ def test_a_zero_sample_batch_is_allowed_and_costs_nothing() -> None:
     assert quota.used("t1", now=0.0) == 0
 
 
-def test_a_non_positive_limit_is_refused() -> None:
+def test_a_negative_limit_is_refused() -> None:
     with pytest.raises(ValueError):
-        QuotaLimiter(samples_per_minute=0)
+        QuotaLimiter(samples_per_minute=-1)
+
+
+# -- 0 means unlimited ---------------------------------------------------------------------------
+
+
+def test_a_default_of_zero_means_unlimited() -> None:
+    quota = QuotaLimiter(samples_per_minute=0)
+
+    assert quota.try_consume("t1", 10_000_000, now=0.0) is True
+    assert quota.limit_for("t1") is None
+
+
+def test_a_tenant_quota_of_zero_overrides_the_default_to_unlimited() -> None:
+    quota = QuotaLimiter(samples_per_minute=10, limit_resolver=lambda tenant: 0)
+
+    assert quota.try_consume("t1", 1_000, now=0.0) is True
+
+
+def test_a_tenant_quota_of_none_falls_back_to_the_default() -> None:
+    """No tenant row is not the same as a tenant asking for no limit."""
+    quota = QuotaLimiter(samples_per_minute=10, limit_resolver=lambda tenant: None)
+
+    assert quota.try_consume("t1", 11, now=0.0) is False
+    assert quota.limit_for("t1") == 10
+
+
+def test_a_tenant_quota_above_zero_still_applies() -> None:
+    quota = QuotaLimiter(samples_per_minute=10, limit_resolver=lambda tenant: 100)
+
+    assert quota.limit_for("t1") == 100
+    assert quota.try_consume("t1", 100, now=0.0) is True
+    assert quota.try_consume("t1", 1, now=0.0) is False
+
+
+def test_an_unlimited_tenant_still_has_its_usage_counted() -> None:
+    """Unlimited means never refused, not unmeasured — the dashboard reads these numbers."""
+    quota = QuotaLimiter(samples_per_minute=0)
+
+    quota.try_consume("t1", 42, now=0.0)
+
+    assert quota.used("t1", now=0.0) == 42
+
+
+def test_an_unlimited_tenant_never_recovers_capacity_because_it_never_spends_it() -> None:
+    quota = QuotaLimiter(samples_per_minute=0)
+    for _ in range(100):
+        assert quota.try_consume("t1", 1_000, now=0.0) is True
 
 
 def test_a_negative_batch_is_refused() -> None:

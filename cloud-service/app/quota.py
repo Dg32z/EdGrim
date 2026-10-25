@@ -25,8 +25,8 @@ class QuotaLimiter:
         window_seconds: float = 60.0,
         limit_resolver: Callable[[str], int | None] | None = None,
     ) -> None:
-        if samples_per_minute < 1:
-            raise ValueError("samples_per_minute must be positive")
+        if samples_per_minute < 0:
+            raise ValueError("samples_per_minute must not be negative")
         if window_seconds <= 0:
             raise ValueError("window_seconds must be positive")
         self._limit = samples_per_minute
@@ -34,16 +34,23 @@ class QuotaLimiter:
         self._limit_resolver = limit_resolver
         self._usage: dict[str, deque[tuple[float, int]]] = {}
 
-    def limit_for(self, tenant_id: str) -> int:
-        """This tenant's ceiling: its own configured quota if it has one, else the default."""
+    def limit_for(self, tenant_id: str) -> int | None:
+        """This tenant's ceiling, or ``None`` when it has none.
+
+        A quota of ``0`` means **unlimited**, at either level: a tenant configured with 0 is uncapped, and a
+        default of 0 makes every tenant without its own quota uncapped. Zero is a meaningful setting rather
+        than a missing one, which is why the resolver's ``None`` (no tenant row) stays distinct from its
+        ``0`` (a tenant that asked for no limit).
+        """
         if self._limit_resolver is not None:
             resolved = self._limit_resolver(tenant_id)
-            if resolved is not None and resolved > 0:
-                return resolved
-        return self._limit
+            if resolved is not None:
+                return None if resolved <= 0 else resolved
+        return None if self._limit <= 0 else self._limit
 
     @property
     def limit(self) -> int:
+        """The default ceiling. ``0`` means unlimited."""
         return self._limit
 
     def used(self, tenant_id: str, now: float | None = None) -> int:
@@ -63,7 +70,8 @@ class QuotaLimiter:
         stamp = now if now is not None else time.monotonic()
         self._evict(tenant_id, stamp)
 
-        if self.used(tenant_id, stamp) + count > self.limit_for(tenant_id):
+        limit = self.limit_for(tenant_id)
+        if limit is not None and self.used(tenant_id, stamp) + count > limit:
             return False
 
         if count:

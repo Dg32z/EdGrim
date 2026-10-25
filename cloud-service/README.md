@@ -58,7 +58,7 @@ database:
   retention_days: 90
 
 quota:
-  samples_per_minute: 6000           # 新租户的默认配额
+  samples_per_minute: 6000           # 新租户的默认配额；0 表示不限
 
 training:
   trainer: logistic                  # logistic | lightgbm

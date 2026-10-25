@@ -94,6 +94,7 @@ def build_service(settings: Settings, trainer_name: str | None = None) -> Servic
             publisher=cycle.publisher,
             registry=registry,
             ops=cycle,
+            default_quota_per_minute=settings.quota_per_minute,
         )
         pages = template_directory()
         if pages is not None:

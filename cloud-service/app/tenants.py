@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 KEY_PREFIX_LENGTH = 8
+#: 0 means unlimited; the default is a real ceiling so a misconfigured tenant cannot flood the service.
 DEFAULT_QUOTA_PER_MINUTE = 6000
 
 _SCHEMA = """
@@ -86,8 +87,8 @@ class TenantStore:
         """Create a tenant and return it with its plaintext key, which is the only time it exists."""
         if not tenant_id or not tenant_id.strip():
             raise ValueError("tenant_id must not be blank")
-        if quota_per_minute < 1:
-            raise ValueError("quota_per_minute must be positive")
+        if quota_per_minute < 0:
+            raise ValueError("quota_per_minute must not be negative")
         if self.get(tenant_id) is not None:
             raise ValueError(f"tenant {tenant_id!r} already exists")
 
@@ -135,8 +136,8 @@ class TenantStore:
 
         new_servers = record.servers if servers is None else tuple(servers)
         new_quota = record.quota_per_minute if quota_per_minute is None else quota_per_minute
-        if new_quota < 1:
-            raise ValueError("quota_per_minute must be positive")
+        if new_quota < 0:
+            raise ValueError("quota_per_minute must not be negative")
 
         with self._connection:
             self._connection.execute(

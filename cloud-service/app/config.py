@@ -55,6 +55,7 @@ database:
 
 quota:
   # 新建租户时的默认配额（样本/分钟）。已有租户在控制台里单独调整。
+  # 0 表示不限——想对所有租户放开就把它设为 0。
   samples_per_minute: 6000
 
 training:
@@ -136,7 +137,7 @@ def load(path: Path) -> Settings:
         retention_days=_positive(
             database.get("retention_days", DEFAULT_RETENTION_DAYS), "database.retention_days"
         ),
-        quota_per_minute=_positive(
+        quota_per_minute=_non_negative_int(
             quota.get("samples_per_minute", DEFAULT_QUOTA_PER_MINUTE), "quota.samples_per_minute"
         ),
         trainer=str(training.get("trainer", "logistic")),
@@ -160,6 +161,13 @@ def _positive(value, key: str) -> int:
     number = int(value)
     if number < 1:
         raise ValueError(f"{key} must be positive, got {number}")
+    return number
+
+
+def _non_negative_int(value, key: str) -> int:
+    number = int(value)
+    if number < 0:
+        raise ValueError(f"{key} must not be negative, got {number}")
     return number
 
 

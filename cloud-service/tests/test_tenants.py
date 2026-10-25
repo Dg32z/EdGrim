@@ -44,6 +44,27 @@ def test_an_unknown_key_is_refused(store: TenantStore) -> None:
     assert store.authenticate("wnk_nope", "s1") is None
 
 
+def test_a_tenant_may_be_created_with_an_unlimited_quota(store: TenantStore) -> None:
+    record, _ = store.create("t1", quota_per_minute=0)
+    assert record.quota_per_minute == 0
+
+
+def test_a_negative_quota_is_refused(store: TenantStore) -> None:
+    with pytest.raises(ValueError, match="negative"):
+        store.create("t1", quota_per_minute=-1)
+
+
+def test_a_tenant_can_be_switched_to_unlimited(store: TenantStore) -> None:
+    store.create("t1", quota_per_minute=100)
+    assert store.update("t1", quota_per_minute=0).quota_per_minute == 0
+
+
+def test_a_negative_quota_update_is_refused(store: TenantStore) -> None:
+    store.create("t1")
+    with pytest.raises(ValueError, match="negative"):
+        store.update("t1", quota_per_minute=-5)
+
+
 def test_duplicate_tenant_ids_are_refused(store: TenantStore) -> None:
     store.create("t1")
     with pytest.raises(ValueError, match="already exists"):

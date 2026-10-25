@@ -31,12 +31,13 @@ class LoginPayload(BaseModel):
 class CreateTenantPayload(BaseModel):
     tenant_id: str = Field(min_length=1, max_length=64)
     servers: list[str] = Field(default_factory=list)
-    quota_per_minute: int = Field(default=DEFAULT_QUOTA_PER_MINUTE, ge=1)
+    #: Omitted means "use the deployment default from config.yaml"; 0 means unlimited.
+    quota_per_minute: int | None = Field(default=None, ge=0)
 
 
 class UpdateTenantPayload(BaseModel):
     servers: list[str] | None = None
-    quota_per_minute: int | None = Field(default=None, ge=1)
+    quota_per_minute: int | None = Field(default=None, ge=0)
 
 
 def _tenant_dict(record) -> dict:
@@ -61,6 +62,7 @@ def create_admin_router(
     publisher: ModelPublisher,
     registry: ModelRegistry,
     ops: OpsCycle,
+    default_quota_per_minute: int = DEFAULT_QUOTA_PER_MINUTE,
 ) -> APIRouter:
     router = APIRouter(prefix="/admin/api", tags=["admin"])
 
@@ -136,7 +138,11 @@ def create_admin_router(
             record, key = tenants.create(
                 tenant_id=payload.tenant_id,
                 servers=payload.servers,
-                quota_per_minute=payload.quota_per_minute,
+                quota_per_minute=(
+                    default_quota_per_minute
+                    if payload.quota_per_minute is None
+                    else payload.quota_per_minute
+                ),
             )
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error

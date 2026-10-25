@@ -134,6 +134,13 @@ def test_invalid_values_are_refused_with_the_key_named(
         load(path)
 
 
+def test_a_quota_of_zero_in_the_yaml_means_unlimited(tmp_path: Path) -> None:
+    path = tmp_path / "config.yaml"
+    path.write_text(yaml.safe_dump({"quota": {"samples_per_minute": 0}}), encoding="utf-8")
+
+    assert load(path).quota_per_minute == 0
+
+
 def test_an_interval_of_zero_turns_automatic_retraining_off(tmp_path: Path) -> None:
     path = tmp_path / "config.yaml"
     path.write_text(yaml.safe_dump({"training": {"interval_seconds": 0}}), encoding="utf-8")

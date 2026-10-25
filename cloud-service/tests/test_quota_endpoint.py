@@ -73,3 +73,64 @@ def test_no_quota_configured_means_no_limit() -> None:
     client = TestClient(create_app(tenants=[SURVIVAL]))
 
     assert client.post("/v1/inference", json=inference_body(500), headers=HEADERS).status_code == 200
+
+
+# -- unlimited quota, end to end -------------------------------------------------------------------
+#
+# A tenant row always carries a quota, so an authenticated request is always checked against that row —
+# the limiter's own default only matters for callers with no tenant record at all.
+
+
+def service_with_quota(default_quota: int):
+    from app.config import Settings
+    from app.serve import build_service
+
+    return build_service(Settings(database_path=":memory:", quota_per_minute=default_quota))
+
+
+def post_samples(service, key: str, count: int):
+    return TestClient(service.app).post(
+        "/v1/inference",
+        json=inference_body(count),
+        headers={"authorization": f"Bearer {key}", "x-server-id": "s1"},
+    )
+
+
+def test_a_tenant_with_an_unlimited_quota_is_never_refused() -> None:
+    service = service_with_quota(10)
+    _, key = service.tenants.create("t1", servers=["s1"], quota_per_minute=0)
+
+    response = post_samples(service, key, 500)
+
+    # 404 is the cold start: the request was accepted and reached the model lookup.
+    assert response.status_code != 429
+
+
+def test_a_tenant_with_a_finite_quota_is_refused_past_it() -> None:
+    service = service_with_quota(6000)
+    _, key = service.tenants.create("t1", servers=["s1"], quota_per_minute=5)
+
+    assert post_samples(service, key, 5).status_code != 429
+    assert post_samples(service, key, 1).status_code == 429
+
+
+def test_a_default_of_zero_makes_new_tenants_unlimited() -> None:
+    from app.config import Settings
+    from app.serve import build_service
+
+    service = build_service(
+        Settings(
+            database_path=":memory:",
+            quota_per_minute=0,
+            admin_username="root",
+            admin_password="pw",
+            admin_secret="s",
+        )
+    )
+    client = TestClient(service.app)
+    client.post("/admin/api/login", json={"username": "root", "password": "pw"})
+
+    created = client.post("/admin/api/tenants", json={"tenant_id": "t1", "servers": ["s1"]})
+
+    assert created.status_code == 201
+    assert created.json()["tenant"]["quota_per_minute"] == 0

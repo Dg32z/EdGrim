@@ -22,7 +22,13 @@ function tenantRow(tenant) {
                 ? h('span', { class: 'chip', text: '任意 server-id' })
                 : tenant.servers.map((server) => h('span', { class: 'chip', text: server })),
         ),
-        h('td', { text: tenant.quota_per_minute }),
+        h(
+            'td',
+            {},
+            tenant.quota_per_minute === 0
+                ? h('span', { class: 'chip', text: '不限' })
+                : tenant.quota_per_minute,
+        ),
         h(
             'td',
             {},
@@ -75,7 +81,7 @@ function openCreate() {
             { class: 'stack' },
             field('tenant-id', '租户 ID'),
             field('tenant-servers', 'server-id（逗号分隔，留空=任意）'),
-            field('tenant-quota', '配额（样本/分钟）', '6000', 'number', { min: '1' }),
+            field('tenant-quota', '配额（样本/分钟，0=不限）', '6000', 'number', { min: '0' }),
             h('p', { class: 'field__hint', text: '创建后会一次性显示 API key。' }),
         ),
         actions: [
@@ -125,7 +131,13 @@ function openEdit(tenant) {
             'div',
             { class: 'stack' },
             field('edit-servers', 'server-id（逗号分隔，留空=任意）', tenant.servers.join(',')),
-            field('edit-quota', '配额（样本/分钟）', String(tenant.quota_per_minute), 'number', { min: '1' }),
+            field(
+                'edit-quota',
+                '配额（样本/分钟，0=不限）',
+                String(tenant.quota_per_minute),
+                'number',
+                { min: '0' },
+            ),
         ),
         actions: [
             { label: '取消', value: null },

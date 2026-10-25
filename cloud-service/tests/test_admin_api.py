@@ -215,3 +215,31 @@ def test_the_admin_api_is_unreachable_with_a_tenant_key_alone(client: TestClient
     response = bare.get("/admin/api/tenants", headers={"authorization": f"Bearer {key}"})
 
     assert response.status_code == 401
+
+
+# -- quota 0 means unlimited -----------------------------------------------------------------------
+
+
+def test_a_tenant_can_be_created_unlimited(client: TestClient) -> None:
+    response = client.post(
+        "/admin/api/tenants", json={"tenant_id": "t-unlimited", "quota_per_minute": 0}
+    )
+
+    assert response.status_code == 201
+    assert response.json()["tenant"]["quota_per_minute"] == 0
+
+
+def test_a_tenant_can_be_switched_to_unlimited(client: TestClient) -> None:
+    client.post("/admin/api/tenants", json={"tenant_id": "t1", "quota_per_minute": 100})
+
+    body = client.patch("/admin/api/tenants/t1", json={"quota_per_minute": 0}).json()["tenant"]
+
+    assert body["quota_per_minute"] == 0
+
+
+def test_a_negative_quota_is_rejected_by_the_api(client: TestClient) -> None:
+    response = client.post(
+        "/admin/api/tenants", json={"tenant_id": "t1", "quota_per_minute": -1}
+    )
+
+    assert response.status_code == 422
