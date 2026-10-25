@@ -21,6 +21,7 @@ import cc.watchneko.predictionengine.UncertaintyHandler;
 import cc.watchneko.utils.anticheat.LogUtil;
 import cc.watchneko.utils.anticheat.MessageUtil;
 import cc.watchneko.utils.anticheat.update.BlockBreak;
+import cc.watchneko.utils.anticheat.update.RotationSequence;
 import cc.watchneko.utils.change.PlayerBlockHistory;
 import cc.watchneko.utils.collisions.datatypes.SimpleCollisionBox;
 import cc.watchneko.utils.data.*;
@@ -243,6 +244,8 @@ public class PlayerData implements GrimUser {
     public long lastBlockBreak = 0;
     public MainSupportingBlockData mainSupportingBlockData = new MainSupportingBlockData(null, false);
     public int totalFlyingPacketsSent;
+    /** Ordered rotation-update stream plus the attack signal anchored in it. */
+    public final RotationSequence rotationSequence = new RotationSequence();
     public boolean serverOpenedInventoryThisTick;
     public boolean hasInventoryOpen;
     public long lastInventoryOpen;

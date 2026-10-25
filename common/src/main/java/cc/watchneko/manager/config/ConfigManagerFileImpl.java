@@ -81,7 +81,7 @@ public class ConfigManagerFileImpl implements ConfigManager, BasicReloadable {
 
                     configVersion = Integer.parseInt(configStringVersion);
                     // TODO: Do we have to hardcode this?
-                    configString = configString.replaceAll("config-version: " + configStringVersion, "config-version: 9");
+                    configString = configString.replaceAll("config-version: " + configStringVersion, "config-version: 10");
                     Files.write(config.toPath(), configString.getBytes());
 
                     upgradeModernConfig(config, configString, configVersion);
@@ -123,6 +123,30 @@ public class ConfigManagerFileImpl implements ConfigManager, BasicReloadable {
         if (configVersion < 9) {
             newOffsetHandlingAntiKB(config, configString);
         }
+        if (configVersion < 10) {
+            addCloudDetection(config, configString);
+        }
+    }
+
+    private void addCloudDetection(File config, String configString) throws IOException {
+        configString += "\n\n\n" +
+                "AnalysisA:\n" +
+                "    # Cloud-assisted rotation detection. Disabled by default: nothing is sent anywhere until enabled.\n" +
+                "    cloud:\n" +
+                "        enabled: false\n" +
+                "        endpoint: \"\"\n" +
+                "        api-key: \"\"\n" +
+                "        server-id: \"\"\n" +
+                "        salt: \"\"\n" +
+                "        timeout-ms: 2000\n" +
+                "    batch-size: 8\n" +
+                "    analysis-window-size: 10\n" +
+                "    min-cheat-votes: 6\n" +
+                "    local-gate-min-energy: 1.25\n" +
+                "    quota-cooldown-ms: 30000\n" +
+                "    debug-log: false";
+
+        Files.write(config.toPath(), configString.getBytes());
     }
 
     private void removeLegacyTwoPointOne(File config) throws IOException {

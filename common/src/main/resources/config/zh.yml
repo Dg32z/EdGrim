@@ -274,6 +274,36 @@ AimS:
     ratio-threshold: 1000.0
     window-size: 5
 
+AnalysisA:
+    # 云端旋转检测。插件只负责采样与特征提取，判定由云端给出。
+    # 云端裁决只累加 VL——是否真的惩罚仍由本文件的 analysis-window-size 与 min-cheat-votes、
+    # 以及 punishments 里的 Analysis 组决定。云端超时、报错或不可达时不会产生任何 VL。
+    cloud:
+        # 总开关。默认关闭：在你启用并配置好之前，不会向任何地方发送数据。
+        enabled: false
+        # 云端服务地址，例如 https://cloud.example.com
+        endpoint: ""
+        # 租户 API key，与 server-id 一起用于认证。
+        api-key: ""
+        # 本服标识，用于按服统计配额与归属样本。
+        server-id: ""
+        # 玩家 ID 哈希用的租户 salt。原始 UUID 不会离开服务器。
+        salt: ""
+        # 单次请求超时（毫秒）。
+        timeout-ms: 2000
+    # 攒够多少个样本发一次请求。同一玩家同时最多只有一个请求在途。
+    batch-size: 8
+    # 投票窗口大小：累计多少个样本裁决后开始判断。
+    analysis-window-size: 10
+    # 窗口内至少多少个 cheat-like 裁决才告警。
+    min-cheat-votes: 6
+    # 超出配额时只发送能量不低于此值的窗口；静止窗口不携带任何瞄准信号。
+    local-gate-min-energy: 1.25
+    # 收到 429 后只发高能量样本的持续时间（毫秒）。
+    quota-cooldown-ms: 30000
+    # 把丢样、云端失败等信息打到控制台。
+    debug-log: false
+
 exploit:
     #是否允许玩家在使用鞘翅时候进行的疾跑跳跃
     allow-sprint-jumping-when-using-elytra: true
@@ -325,4 +355,4 @@ history:
         password: ""
 
 # 不要调整这个
-config-version: 9
+config-version: 10

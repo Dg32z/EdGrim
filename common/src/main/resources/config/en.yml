@@ -271,6 +271,37 @@ AimS:
     ratio-threshold: 1000.0
     window-size: 5
 
+AnalysisA:
+    # Cloud-assisted rotation detection. The plugin only samples and extracts features; the verdict comes
+    # from the cloud. Cloud verdicts only ever add VL - whether that becomes a punishment is still decided
+    # here, by analysis-window-size and min-cheat-votes, plus the Analysis punishments group.
+    # A timeout, an error or an unreachable cloud never produces a VL.
+    cloud:
+        # Master switch. Off by default: nothing is sent anywhere until you enable it and configure it.
+        enabled: false
+        # Cloud service address, e.g. https://cloud.example.com
+        endpoint: ""
+        # Tenant API key, sent together with server-id to authenticate.
+        api-key: ""
+        # This server's identity, used for per-server quotas and sample attribution.
+        server-id: ""
+        # Tenant salt used to hash player ids. Raw UUIDs never leave the server.
+        salt: ""
+        # Per-request timeout in milliseconds.
+        timeout-ms: 2000
+    # How many samples to accumulate before sending. At most one request per player is ever in flight.
+    batch-size: 8
+    # Voting window: how many sample verdicts to accumulate before judging.
+    analysis-window-size: 10
+    # How many cheat-like verdicts inside that window are needed to alert.
+    min-cheat-votes: 6
+    # While over quota, only windows at least this energetic are sent; still windows carry no aim signal.
+    local-gate-min-energy: 1.25
+    # How long to keep sending only energetic samples after a 429, in milliseconds.
+    quota-cooldown-ms: 30000
+    # Print dropped samples and cloud failures to the console.
+    debug-log: false
+
 exploit:
     # You can gain high speeds when sprint jumping with an elytra, this prevents the exploit when set to false
     # Mojang screwed up netcode by making elytra start client sided and elytra end server sided
@@ -323,4 +354,4 @@ history:
         username: root
         password: ""
 
-config-version: 9
+config-version: 10

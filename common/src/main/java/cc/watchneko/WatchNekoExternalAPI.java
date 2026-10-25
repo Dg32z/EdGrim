@@ -6,6 +6,7 @@ import ac.grim.grimac.api.alerts.AlertManager;
 import ac.grim.grimac.api.config.ConfigManager;
 import ac.grim.grimac.api.event.EventBus;
 import ac.grim.grimac.api.event.events.GrimReloadEvent;
+import cc.watchneko.checks.impl.analysis.CloudGateway;
 import cc.watchneko.manager.config.ConfigManagerFileImpl;
 import cc.watchneko.manager.init.start.StartableInitable;
 import cc.watchneko.player.PlayerData;
@@ -179,6 +180,9 @@ public class WatchNekoExternalAPI implements GrimAbstractAPI, ConfigReloadObserv
         WatchNekoAPI.INSTANCE.getDiscordManager().reload();
         WatchNekoAPI.INSTANCE.getSpectateManager().reload();
         WatchNekoAPI.INSTANCE.getViolationDatabaseManager().reload();
+        // Rebuild the cloud gateway before players reload their checks, so a check either sees a fully
+        // configured gateway or none at all
+        CloudGateway.reload(configManager);
         // Don't reload players if the plugin hasn't started yet
         if (!started) return;
         // Reload checks for all players

@@ -1,0 +1,19 @@
+services:
+  cloud:
+    build: ./cloud-service
+    ports:
+      - "8000:8000"
+    environment:
+      # A JSON array of tenants. Empty means "development posture": every caller is one local tenant,
+      # which is fine on localhost and wrong the moment this port is reachable from elsewhere.
+      WATCHNEKO_TENANTS: '[]'
+      WATCHNEKO_QUOTA_PER_MINUTE: "6000"
+      WATCHNEKO_RETENTION_DAYS: "90"
+      WATCHNEKO_RETRAIN_INTERVAL_SECONDS: "3600"
+      WATCHNEKO_DATABASE_PATH: "/data/watchneko.db"
+    volumes:
+      - watchneko-data:/data
+    restart: unless-stopped
+
+volumes:
+  watchneko-data:

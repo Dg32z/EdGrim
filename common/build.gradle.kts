@@ -42,6 +42,8 @@ dependencies {
     // Bump snakeyaml (transitive dep of configuralize) 1.29 -> 2.2 for geyser-fabric
     api("org.yaml:snakeyaml:2.2")
     api(libs.fastutil)
+    // The cloud contract's wire format is JSON; see contract/README.md.
+    implementation(libs.gson)
     api(libs.adventure.text.minimessage)
     api(libs.jetbrains.annotations)
     api("com.zaxxer:HikariCP:4.0.3")
@@ -52,10 +54,19 @@ dependencies {
         isTransitive = false // messes with guava otherwise
     }
 
-    compileOnly(libs.floodgate.api)
+    compileOnly(libs.floodgate.api) {
+        isTransitive = false // org.geysermc:common snapshot is no longer published; only FloodgateApi is needed
+    }
     compileOnly(libs.via.version.api)
     compileOnly(libs.netty)
     compileOnly(libs.paper.api)
+
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 publishing.publications.create<MavenPublication>("maven") {

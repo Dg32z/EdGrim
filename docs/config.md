@@ -6,7 +6,7 @@
 
 改完之后输入 `/watchneko reload` 生效（**数据库设置除外**，那个必须重启服务器）。
 
-> ⚠️ 文件末尾有一行 `config-version: 9`，**不要动它**。插件靠这个数字判断你的配置是不是旧版本，需要时自动升级。
+> ⚠️ 文件末尾有一行 `config-version: 10`，**不要动它**。插件靠这个数字判断你的配置是不是旧版本，需要时自动升级。
 
 ---
 
@@ -22,6 +22,7 @@
 - [Simulation — 移动模拟](#simulation--移动模拟)
 - [其余检测的单独设置](#其余检测的单独设置)
 - [exploit — 漏洞缓解](#exploit--漏洞缓解)
+- [AnalysisA — 云端旋转检测](#analysisa--云端旋转检测)
 - [实验性检查](#实验性检查)
 - [物品使用重置](#物品使用重置)
 - [数据包限制](#数据包限制)
@@ -632,6 +633,58 @@ exploit:
 | `distance-to-check-if-ghostblocks` | `2` | 检查幽灵方块的距离，单位方块 |
 
 **幽灵方块是什么**：服务端认为那里没方块，客户端认为有，玩家就会卡在半空中。这两个设置是**缓解措施**，不是检测。
+
+---
+
+## AnalysisA — 云端旋转检测
+
+把旋转判定交给云端服务：插件只负责采样与特征提取，云端返回裁决，**是否惩罚仍由本地规则决定**。
+
+**默认关闭**。在你启用并配置好之前，不会向任何地方发送数据。
+
+```yaml
+AnalysisA:
+    cloud:
+        enabled: false
+        endpoint: "https://cloud.example.com"
+        api-key: "你的租户密钥"
+        server-id: "survival-1"
+        salt: "一段随机字符串"
+        timeout-ms: 2000
+    batch-size: 8
+    analysis-window-size: 10
+    min-cheat-votes: 6
+    debug-log: false
+```
+
+| 设置 | 默认 | 说明 |
+|---|---|---|
+| `cloud.enabled` | `false` | 总开关 |
+| `cloud.endpoint` | `""` | 云端服务地址 |
+| `cloud.api-key` | `""` | 租户 API key，与 `server-id` 一起认证 |
+| `cloud.server-id` | `""` | 本服标识，用于按服统计与样本归属 |
+| `cloud.salt` | `""` | 玩家 ID 哈希用的租户 salt；原始 UUID 不会离开服务器 |
+| `cloud.timeout-ms` | `2000` | 单次请求超时（毫秒） |
+| `batch-size` | `8` | 攒够多少样本发一次；同一玩家同时最多一个请求在途 |
+| `analysis-window-size` | `10` | 投票窗口大小 |
+| `min-cheat-votes` | `6` | 窗口内至少多少个 cheat-like 裁决才告警 |
+| `local-gate-min-energy` | `1.25` | 超出配额时只发送能量不低于此值的窗口；静止窗口不携带瞄准信号 |
+| `quota-cooldown-ms` | `30000` | 收到 429 后只发高能量样本的持续时间 |
+| `debug-log` | `false` | 打印丢样与云端失败信息 |
+
+### 它与惩罚的关系
+
+云端裁决**只累加 VL**。是否踢人仍由 `punishments.yml` 里的 `Analysis` 组决定——那一组按检查名子串匹配，所以 `AnalysisA` 自动继承它，不需要新增配置。
+
+### 三种不会误判的情形
+
+- **云端不可达、超时或返回错误**：不告警、不加 VL。
+- **云端还没有发布模型**：检查整个不启用，一个请求都不发。
+- **模型的特征维度与本插件不一致**：检查不启用，并在控制台报错。
+
+### 采样窗口
+
+窗口以**旋转更新次数**计，不按 tick 也不按时间。玩家不动鼠标时不产生旋转更新，因此窗口跨越的真实时长并不固定——这是 `docs/adr/0001` 记录的有意选择。
 
 ---
 

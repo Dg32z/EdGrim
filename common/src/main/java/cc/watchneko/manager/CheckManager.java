@@ -6,6 +6,7 @@ import cc.watchneko.checks.impl.aim.*;
 import cc.watchneko.checks.impl.aim.processor.AimProcessor;
 import cc.watchneko.checks.impl.aim.processor.Cinematic;
 import cc.watchneko.checks.impl.autoclicker.AutoclickerA;
+import cc.watchneko.checks.impl.analysis.AnalysisA;
 import cc.watchneko.checks.impl.badpackets.*;
 import cc.watchneko.checks.impl.breaking.*;
 import cc.watchneko.checks.impl.chat.ChatA;
@@ -82,9 +83,11 @@ public class CheckManager {
     private final ClassToInstanceMap<BlockBreakCheck> blockBreakChecks;
     private final ClassToInstanceMap<BlockPlaceCheck> blockPlaceChecks;
     private final ClassToInstanceMap<PostPredictionCheck> postPredictionChecks;
+    private final PlayerData player;
     private PacketEntityReplication packetEntityReplication = null;
 
     public CheckManager(PlayerData player) {
+        this.player = player;
         packetChecks = new ImmutableClassToInstanceMap.Builder<PacketCheck>()
                 .put(PacketOrderProcessor.class, player.packetOrderProcessor)
                 .put(Reach.class, new Reach(player))
@@ -195,6 +198,7 @@ public class CheckManager {
                 .put(AimZ.class, new AimZ(player))
                 .put(AimAA.class, new AimAA(player))
                 .put(AimAB.class, new AimAB(player))
+                .put(AnalysisA.class, new AnalysisA(player))
                 .build();
         vehicleChecks = new ImmutableClassToInstanceMap.Builder<VehicleCheck>()
                 .put(VehiclePredictionRunner.class, new VehiclePredictionRunner(player))
@@ -394,6 +398,7 @@ public class CheckManager {
     }
 
     public void onRotationUpdate(final RotationUpdate rotation) {
+        player.rotationSequence.onRotationUpdate(rotation);
         for (RotationCheck check : rotationChecks.values()) {
             check.process(rotation);
         }

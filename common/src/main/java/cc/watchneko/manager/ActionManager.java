@@ -22,15 +22,28 @@ public class ActionManager extends Check implements PacketCheck {
         if (event.getPacketType() == PacketType.Play.Client.INTERACT_ENTITY) {
             WrapperPlayClientInteractEntity action = new WrapperPlayClientInteractEntity(event);
             if (action.getAction() == WrapperPlayClientInteractEntity.InteractAction.ATTACK) {
-                player.totalFlyingPacketsSent = 0;
-                attacking = true;
-                lastAttack = System.currentTimeMillis();
+                onAttackObserved(action.getEntityId());
             }
         } else if (isTickPacketIncludingNonMovement(event.getPacketType())) {
             player.totalFlyingPacketsSent++;
             player.incrementRespawnTick();
             attacking = false;
         }
+    }
+
+    /**
+     * Records one observed attack. The packet entry point above is only an adapter onto this method, so
+     * the attack signal can be produced without a PacketEvents event.
+     *
+     * <p>Beyond the existing time-based bookkeeping this publishes the attack into the player's
+     * {@link cc.watchneko.utils.anticheat.update.RotationSequence}, anchoring it at its position in the
+     * rotation-update sequence.
+     */
+    public void onAttackObserved(final int entityId) {
+        player.totalFlyingPacketsSent = 0;
+        attacking = true;
+        lastAttack = System.currentTimeMillis();
+        player.rotationSequence.onAttackObserved(entityId);
     }
 
     public boolean hasAttackedSince(long time) {
