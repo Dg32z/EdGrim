@@ -75,7 +75,7 @@
 
 > 输入 `/watchneko help` 可以随时看帮助。目前**没有**短命令（比如 `/wn`、`/ac`）。
 
-### [📖 全部 16 个命令的详解、参数与权限表 →](docs/commands.md)
+### [📖 全部 17 个命令的详解、参数与权限表 →](docs/commands.md)
 
 ## 🎯 能抓什么
 
@@ -99,6 +99,8 @@ Paper / Spigot / Purpur / Folia · Minecraft 1.8 – 1.21 · 手机版（基岩�
 | `punishments.yml` | 抓到几次提醒、几次踢出、几次封号 | **[📖 punishments.yml 详解](docs/punishments.md)** |
 | `messages.yml` | 提醒的文字、颜色、悬停内容 | **[📖 messages.yml 详解](docs/messages.md)** |
 | `discord.yml` | 把提醒发到 Discord 频道 | **[📖 discord.yml 详解](docs/discord.md)** |
+
+云端旋转检测（`AnalysisA`）需要单独搭一个服务，完整的接入流程见 **[📖 云端检测接入指南](docs/cloud-detection.md)**——从部署云端、建租户拿密钥，到训练出第一个模型。
 
 ## ❓ 常见问题
 

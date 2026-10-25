@@ -24,6 +24,9 @@
   - [`/watchneko list players`](#watchneko-list-players)
   - [`/watchneko reload`](#watchneko-reload)
   - [`/watchneko version`](#watchneko-version)
+- [训练云端检测用](#训练云端检测用)
+  - [`/watchneko record start`](#watchneko-record-start)
+  - [`/watchneko record stop`](#watchneko-record-stop)
 - [权限总结](#权限总结)
 
 ---
@@ -248,6 +251,50 @@ Milliseconds per prediction (avg. 20k): 0.019
 - 权限：`watchneko.version`
 - 服务器启动时会在控制台打印一次版本号（由 `config.yml` 的 `check-for-updates` 控制）
 
+## 训练云端检测用
+
+这两个命令用于给云端检测**录制训练样本**。云端模型要靠带标注的数据训练，而标注只能由人给出——你知道正在看的是作弊还是正常玩家。
+
+录制需要云端已连通。没连上时命令会直接拒绝：没有租户 salt 就没法哈希玩家 ID，也没有地方上传。
+
+### `/watchneko record start`
+
+开始录制某个玩家的样本，并**先**给出标注。
+
+```
+/watchneko record start <玩家> <cheat|legit>
+```
+
+- 权限：`watchneko.record`
+- `cheat` — 这个玩家正在作弊，录下来的样本应被判为作弊
+- `legit` — 这个玩家是正常的，录下来的样本应被判为正常
+
+标注在开始时就选定，而不是录完再标——因为开始录制的那一刻你已经知道自己在录什么。同一玩家同时只能有一个录制会话，重复 `start` 会被拒绝而不是覆盖。
+
+```text
+/watchneko record start Steve cheat
+```
+
+### `/watchneko record stop`
+
+结束录制，并决定这份数据要不要。
+
+```
+/watchneko record stop <玩家> <upload|discard>
+```
+
+- 权限：`watchneko.record`
+- `upload` — 作为一个带标注的批次上传到云端数据集
+- `discard` — 丢弃
+
+录坏了直接 `discard` 即可，不会污染数据集。
+
+```text
+/watchneko record stop Steve upload
+```
+
+**录制多少合适**：一次录 30 秒到 2 分钟的高质量片段，比录 10 分钟里面只有 5 秒在作弊有用得多。云端训练需要 `cheat` 和 `legit` **两类都有**，只有一类的话数据集不可训练，控制台会显示「缺一类」。
+
 ## 权限总结
 
 | 权限 | 作用 |
@@ -268,6 +315,7 @@ Milliseconds per prediction (avg. 20k): 0.019
 | `watchneko.list` | 列出玩家 |
 | `watchneko.dump` | 生成诊断报告 |
 | `watchneko.reload` | 重载配置 |
+| `watchneko.record` | 录制训练样本 |
 | `watchneko.exempt` | **豁免全部检测** |
 | `watchneko.nosetback` | 不做拉回 |
 | `watchneko.nomodifypacket` | 不修改数据包 |

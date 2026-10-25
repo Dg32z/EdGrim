@@ -7,7 +7,6 @@
 
 契约由本目录下的 `fixtures/` 语料固定。两侧的测试读同一批文件：**任一侧改动契约，两侧测试必须同时变红**。改动契约的唯一正确姿势是先改 fixture，再让两侧测试一起红、一起绿。
 
-相关决策见 `docs/adr/0003-cloud-inference-architecture.md`；术语以 `GLOSSARY.md` 为准。
 
 ---
 

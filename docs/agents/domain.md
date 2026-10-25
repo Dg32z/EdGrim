@@ -2,6 +2,8 @@
 
 How the engineering skills should consume this repo's domain documentation when exploring the codebase.
 
+> **本仓库现状**：没有 `GLOSSARY.md`，也没有 `docs/adr/`。领域知识写在 `docs/` 下面向用户的文档里，HTTP 协议参考在 `contract/README.md`。下面的模板描述的是这些文件存在时该怎么读，缺失时按原规则静默跳过。
+
 ## Before exploring, read these
 
 - **`GLOSSARY.md`** at the repo root, or

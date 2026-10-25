@@ -14,7 +14,7 @@
 
 - [alerts — 提醒](#alerts--提醒)
 - [verbose — 详细模式](#verbose--详细模式)
-- [check-for-updates — 更新检查](#check-for-updates--更新检查)
+- [check-for-updates — 启动时打印版本](#check-for-updates--启动时打印版本)
 - [client-brand — 客户端品牌](#client-brand--客户端品牌)
 - [spectators — 旁观者隐藏](#spectators--旁观者隐藏)
 - [max-transaction-time — 超时踢出](#max-transaction-time--超时踢出)
@@ -654,6 +654,8 @@ AnalysisA:
     batch-size: 8
     analysis-window-size: 10
     min-cheat-votes: 6
+    local-gate-min-energy: 1.25
+    quota-cooldown-ms: 30000
     debug-log: false
 ```
 
@@ -684,7 +686,7 @@ AnalysisA:
 
 ### 采样窗口
 
-窗口以**旋转更新次数**计，不按 tick 也不按时间。玩家不动鼠标时不产生旋转更新，因此窗口跨越的真实时长并不固定——这是 `docs/adr/0001` 记录的有意选择。
+窗口以**旋转更新次数**计，不按 tick 也不按时间。玩家不动鼠标时不产生旋转更新，因此窗口跨越的真实时长并不固定。这是有意的：按 tick 或按毫秒计，采样密度会随服务器 TPS 波动，同样的作弊行为在不同负载下得到不同的判定。
 
 ---
 

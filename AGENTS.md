@@ -10,4 +10,4 @@ Five canonical triage roles map to same-named GitHub labels (`needs-triage`, `ne
 
 ### Domain docs
 
-Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+本仓库不维护 `GLOSSARY.md` 与 `docs/adr/`：面向用户的文档在 `docs/`，协议参考在 `contract/`。 见 `docs/agents/domain.md`。
