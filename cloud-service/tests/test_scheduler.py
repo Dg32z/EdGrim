@@ -125,9 +125,9 @@ def test_an_unservable_artifact_leaves_the_previous_model_answering() -> None:
     unservable = type(good)(
         model_id="m-bad",
         dataset_id=good.dataset_id,
-        trainer_name="lightgbm-v1",
+        trainer_name="future-v9",
         thresholds=good.thresholds,
-        artifact={"kind": "lightgbm", "model": "tree=..."},
+        artifact={"kind": "future-v9", "payload": "..."},
         feature_dimensions=22,
     )
     apply(unservable)

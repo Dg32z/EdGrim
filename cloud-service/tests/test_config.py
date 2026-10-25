@@ -112,3 +112,49 @@ def test_the_retrain_loop_targets_the_configured_tenants() -> None:
 
     # A tick against a tenant with no data must be a no-op rather than an error.
     service.ops.run_once()
+
+
+def test_the_trainer_can_be_selected_from_the_environment() -> None:
+    settings = load_settings({"WATCHNEKO_TRAINER": "lightgbm"})
+    assert settings.trainer == "lightgbm"
+
+
+def test_an_unknown_trainer_falls_back_to_logistic() -> None:
+    service = build_service(Settings(tenants=[], database_path=":memory:", trainer="does-not-exist"))
+
+    assert service.app is not None
+
+
+def test_a_service_built_for_lightgbm_can_train_and_serve() -> None:
+    """End to end through the composition root, with the backend the spec actually asked for."""
+    import pytest
+
+    from app.dataset import CHEAT, LabelledSample, make_dataset
+    from app.train import available_trainers
+
+    if "lightgbm" not in available_trainers():
+        pytest.skip("lightgbm is not installed in this environment")
+
+    service = build_service(
+        Settings(tenants=[], database_path=":memory:", trainer="lightgbm", retrain_interval_seconds=60)
+    )
+
+    features = lambda seed: [round(seed + i * 0.001, 6) for i in range(22)]  # noqa: E731
+    samples = [
+        LabelledSample(f"c{i}", "h", tuple(features(0.8)), CHEAT) for i in range(6)
+    ] + [LabelledSample(f"l{i}", "h", tuple(features(0.2)), "legit") for i in range(6)]
+
+    for sample in samples:
+        label = "cheat" if sample.label == CHEAT else "legit"
+        service.store.record(
+            "t1", "s1", f"rs-{label}", label,
+            [{"sample_id": sample.sample_id, "player_hash": "h", "features": list(sample.features)}],
+        )
+
+    service.ops._tenants = ["t1"]  # the settings above carry no tenants
+    service.ops.run_once()
+
+    assert service.registry.current() is not None
+    high = service.registry.scorer().score(features(0.8))
+    low = service.registry.scorer().score(features(0.2))
+    assert high > low, "a LightGBM model trained through the composition root must separate the classes"

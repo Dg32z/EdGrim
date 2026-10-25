@@ -5,3 +5,8 @@ pydantic==2.14.1
 pytest==9.1.1
 # Starlette 1.10's TestClient wants httpx2; plain httpx only triggers a deprecation warning.
 httpx2==2.16.0
+
+# Training backend: the gradient-boosted trees the spec asks for. The Linux wheel bundles OpenMP;
+# on macOS the wheel needs libomp at runtime (see README).
+lightgbm==4.7.0
+scikit-learn==1.9.1

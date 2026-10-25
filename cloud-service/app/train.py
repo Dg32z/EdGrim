@@ -105,17 +105,34 @@ class LogisticTrainer:
         return _LogisticPredictor(weights, bias)
 
 
+class _LightGBMPredictor:
+    """Wraps a LightGBM booster. Reconstructible from its artifact, which is what makes it servable."""
+
+    def __init__(self, booster) -> None:
+        self._booster = booster
+
+    def score(self, features: Sequence[float]) -> float:
+        return float(self._booster.predict([list(features)])[0])
+
+    def artifact(self) -> dict:
+        return {"kind": "lightgbm", "model": self._booster.model_to_string()}
+
+
 class LightGBMTrainer:
-    """The production backend. Imported lazily so the service runs without the native library present."""
+    """The production backend. Imported lazily so the service runs without the native library present.
+
+    The settings are chosen for reproducibility rather than speed: a model whose ``model_id`` names its
+    inputs must also be the model those inputs actually produce, so determinism is not optional here.
+    """
 
     @property
     def name(self) -> str:
         return "lightgbm-v1"
 
-    def fit(self, features: Sequence[Sequence[float]], labels: Sequence[int]):
+    def fit(self, features: Sequence[Sequence[float]], labels: Sequence[int]) -> _LightGBMPredictor:
         import lightgbm  # noqa: PLC0415 - optional dependency, resolved at training time
 
-        booster = lightgbm.LGBMClassifier(
+        classifier = lightgbm.LGBMClassifier(
             n_estimators=120,
             num_leaves=15,
             min_child_samples=5,
@@ -124,16 +141,8 @@ class LightGBMTrainer:
             random_state=0,
             verbose=-1,
         )
-        booster.fit(list(features), list(labels))
-
-        class _Booster:
-            def score(self, row: Sequence[float]) -> float:
-                return float(booster.predict_proba([list(row)])[0][1])
-
-            def artifact(self) -> dict:
-                return {"kind": "lightgbm", "model": booster.booster_.model_to_string()}
-
-        return _Booster()
+        classifier.fit(list(features), list(labels))
+        return _LightGBMPredictor(classifier.booster_)
 
 
 def available_trainers() -> dict[str, Trainer]:
@@ -213,13 +222,18 @@ def train_model(dataset: Dataset, trainer: Trainer) -> TrainedModel:
 def predictor_from_artifact(artifact: dict) -> Predictor:
     """Rebuild a scorer from a published artifact.
 
-    Only the logistic artifact is reconstructible today. A LightGBM artifact would need the booster parsed
-    back out of its model string, which is ticket-worthy work of its own; until then that backend publishes
-    a model the service cannot serve, and saying so is better than pretending otherwise.
+    Both backends are reconstructible: logistic from its weights, LightGBM by parsing the booster back out
+    of its model string. Without this a published model could not be served, which would make the whole
+    publish/rollback machinery decorative.
     """
-    if artifact.get("kind") != "logistic":
-        raise ValueError(f"cannot rebuild a scorer from artifact kind {artifact.get('kind')!r}")
-    return _LogisticPredictor(list(artifact["weights"]), float(artifact["bias"]))
+    kind = artifact.get("kind")
+    if kind == "logistic":
+        return _LogisticPredictor(list(artifact["weights"]), float(artifact["bias"]))
+    if kind == "lightgbm":
+        import lightgbm  # noqa: PLC0415 - only needed for this backend
+
+        return _LightGBMPredictor(lightgbm.Booster(model_str=artifact["model"]))
+    raise ValueError(f"cannot rebuild a scorer from artifact kind {kind!r}")
 
 
 def artifact_bytes(model: TrainedModel) -> bytes:

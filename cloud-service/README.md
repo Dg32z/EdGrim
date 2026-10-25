@@ -63,25 +63,44 @@ app/
 
 ## 训练后端
 
-`available_trainers()` 会探测可用的后端：
+`available_trainers()` 探测可用后端：
 
 | 后端 | 依赖 | 说明 |
 | --- | --- | --- |
-| `logistic` | 无 | 纯 Python 批量梯度下降，确定性，默认后端 |
-| `lightgbm` | `lightgbm` | 装了才启用；`deterministic=True`、`force_row_wise=True` |
+| `logistic` | 无 | 纯 Python 批量梯度下降，确定性，永远可用 |
+| `lightgbm` | `lightgbm` + `scikit-learn` | 规格要求的 GBDT；`deterministic=True`、`force_row_wise=True` |
 
-**为什么默认不是 LightGBM**：开发机是 Python 3.14，LightGBM 没有对应的预编译轮子，源码编译
-25 分钟未完成。镜像用 `python:3.12-slim`，在那个环境里 `pip install lightgbm` 有轮子可用，
-后端会自动启用。训练流水线本身（数据集版本、阈值推导、发布、回滚）与后端无关，换后端不动其余部分。
+用 `WATCHNEKO_TRAINER` 选择，默认 `logistic`。两者产出的模型**都可服务**：
+`predictor_from_artifact` 能从各自产物重建打分器（logistic 从权重，LightGBM 从 booster 模型字符串）。
+这一点很关键——模型若无法加载，发布与回滚就只是摆设。
 
-注意：`predictor_from_artifact` 目前只能从 logistic 产物重建打分器。LightGBM 产物需要把 booster
-从模型字符串里解析回来，是独立一块工作——在那之前该后端发布出的模型服务端无法加载，
-`apply_to_registry` 会记一条 error 并保留上一个模型继续服务，而不是让检测下线。
+### macOS 上的 libomp
+
+LightGBM 的 macOS 轮子不带 OpenMP 运行时，`import lightgbm` 会报
+`Library not loaded: @rpath/libomp.dylib`。**Linux 轮子自带**，容器里不需要任何额外步骤。
+
+macOS 上有两条路：
+
+1. `brew install libomp` —— 需要能写 `/usr/local`。
+2. 写不了 `/usr/local` 时，把 conda-forge 的 `llvm-openmp` 取进 venv 并给 LightGBM 的 dylib 加 rpath：
+
+```bash
+curl -sL https://conda.anaconda.org/conda-forge/osx-64/llvm-openmp-23.1.4-h8c1e6b9_0.conda -o /tmp/lo.conda
+mkdir -p /tmp/lo && cd /tmp/lo && unzip -q ../lo.conda && tar --zstd -xf pkg-*.tar.zst
+
+LGB=.venv/lib/python3.14/site-packages/lightgbm/lib/lib_lightgbm.dylib
+mkdir -p .venv/lib/libomp-runtime
+cp /tmp/lo/lib/libomp.dylib .venv/lib/libomp-runtime/
+install_name_tool -add_rpath "$PWD/.venv/lib/libomp-runtime" "$LGB"
+codesign --force --sign - "$LGB"          # install_name_tool 会破坏签名
+```
+
+第 2 条是开发机上实际走的路径（沙箱不允许写 `/usr/local`），`import`、训练、booster 序列化与重建均已验证。
 
 ## 跑测试
 
 ```bash
-.venv/bin/python -m pytest        # 116 个用例
+.venv/bin/python -m pytest        # 128 个用例
 ```
 
 ## 有意保留的限制

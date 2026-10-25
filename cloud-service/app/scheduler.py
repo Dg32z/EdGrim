@@ -34,10 +34,11 @@ def apply_to_registry(registry: ModelRegistry) -> Callable[[TrainedModel], None]
     def apply(model: TrainedModel) -> None:
         try:
             scorer = predictor_from_artifact(model.artifact)
-        except ValueError:
-            # The backend published a model this build cannot serve. Better to leave the previous model
-            # answering than to take detection offline; the error is visible in the metrics.
-            logger.error("cannot serve model %s: unsupported artifact", model.model_id)
+        except Exception:
+            # The backend published a model this build cannot serve — an unknown artifact kind, or a
+            # corrupt booster string. Leaving the previous model answering beats taking detection offline,
+            # and the failure is visible in the metrics rather than silent.
+            logger.exception("cannot serve model %s; keeping the previous model", model.model_id)
             return
         registry.set(
             Model(
