@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>WatchNeko 控制台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@400;500;700&family=Roboto+Mono:wght@400&display=swap">
+<link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
+<link rel="stylesheet" href="md3.css">
+</head>
+<body>
+
+<!-- Login. Shown until a session is confirmed; the app shell stays hidden so a signed-out visitor never
+     sees a flash of the dashboard. -->
+<div class="login" id="login-view" hidden>
+    <form class="login__card" id="login-form" novalidate>
+        <h1 class="login__title">WatchNeko 控制台</h1>
+        <p class="card__hint">管理员登录。租户 API key 不能用于此处。</p>
+
+        <label class="field">
+            <input id="login-username" name="username" type="text" placeholder=" " autocomplete="username" required>
+            <span class="field__label">用户名</span>
+        </label>
+
+        <label class="field">
+            <input id="login-password" name="password" type="password" placeholder=" " autocomplete="current-password" required>
+            <span class="field__label">密码</span>
+        </label>
+
+        <p class="login__error" id="login-error" role="alert"></p>
+
+        <button class="btn btn--filled" type="submit" id="login-submit">登录</button>
+    </form>
+</div>
+
+<!-- Application shell. -->
+<div class="app" id="app-view" hidden>
+    <nav class="rail" aria-label="主导航">
+        <div class="rail__brand" aria-hidden="true">WN</div>
+
+        <button class="rail__item" data-view="dashboard" aria-current="page">
+            <span class="material-symbols-outlined" aria-hidden="true">dashboard</span>
+            <span>仪表盘</span>
+        </button>
+        <button class="rail__item" data-view="tenants">
+            <span class="material-symbols-outlined" aria-hidden="true">key</span>
+            <span>租户</span>
+        </button>
+        <button class="rail__item" data-view="datasets">
+            <span class="material-symbols-outlined" aria-hidden="true">database</span>
+            <span>数据集</span>
+        </button>
+        <button class="rail__item" data-view="models">
+            <span class="material-symbols-outlined" aria-hidden="true">model_training</span>
+            <span>模型</span>
+        </button>
+    </nav>
+
+    <div class="main">
+        <header class="top-bar">
+            <h1 class="top-bar__title" id="view-title">仪表盘</h1>
+            <button class="btn btn--text btn--small" id="refresh-button" title="刷新">
+                <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+                刷新
+            </button>
+            <button class="btn btn--text btn--small" id="logout-button">
+                <span class="material-symbols-outlined" aria-hidden="true">logout</span>
+                退出
+            </button>
+        </header>
+
+        <main class="content" id="content" tabindex="-1"></main>
+    </div>
+</div>
+
+<!-- Overlays are created on demand by app.js so a dialog never lingers in the DOM. -->
+<div id="overlay-root"></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

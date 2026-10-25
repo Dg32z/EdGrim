@@ -29,10 +29,17 @@ class Settings:
     retrain_interval_seconds: float = DEFAULT_RETRAIN_INTERVAL_SECONDS
     database_path: str = "watchneko.db"
     trainer: str = "logistic"
+    admin_username: str = "admin"
+    admin_password: str = ""
+    admin_secret: str = ""
 
     @property
     def is_authenticated(self) -> bool:
         return bool(self.tenants)
+
+    @property
+    def has_admin_password(self) -> bool:
+        return bool(self.admin_password)
 
 
 def _parse_tenants(raw: str | None) -> list[Tenant]:
@@ -72,4 +79,7 @@ def load_settings(environ: dict[str, str] | None = None) -> Settings:
         ),
         database_path=source.get("WATCHNEKO_DATABASE_PATH", "watchneko.db"),
         trainer=source.get("WATCHNEKO_TRAINER", "logistic"),
+        admin_username=source.get("WATCHNEKO_ADMIN_USERNAME", "admin"),
+        admin_password=source.get("WATCHNEKO_ADMIN_PASSWORD", ""),
+        admin_secret=source.get("WATCHNEKO_ADMIN_SECRET", ""),
     )

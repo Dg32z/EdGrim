@@ -68,6 +68,21 @@ class Metrics:
         total = self.total_verdicts
         return 0.0 if total == 0 else self.verdicts.get("cheat_like", 0) / total
 
+    def snapshot(self) -> dict:
+        """The same numbers as :meth:`render`, as data — what the console's dashboard reads."""
+        return {
+            "samples_by_tenant": dict(sorted(self.samples_by_tenant.items())),
+            "verdicts": {label: self.verdicts.get(label, 0) for label in LABELS},
+            "requests": self.requests,
+            "errors": self.errors,
+            "error_rate": round(self.error_rate, 6),
+            "queue_backlog": self.queue_backlog,
+            "model_id": self.model_id,
+            "dataset_id": self.dataset_id,
+            "rollbacks": self.rollbacks,
+            "cheat_ratio": round(self.cheat_ratio(), 6),
+        }
+
     def render(self) -> str:
         """The whole surface as Prometheus text."""
         lines: list[str] = []

@@ -9,7 +9,8 @@ policy this service enforces can be exercised from a test without patching modul
 
 from __future__ import annotations
 
-from fastapi import Depends, FastAPI, Header, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, PlainTextResponse
 
@@ -53,6 +54,9 @@ def create_app(
     store: SampleStore | None = None,
     quota: QuotaLimiter | None = None,
     metrics: Metrics | None = None,
+    tenant_store=None,
+    admin_router=None,
+    static_directory: str | None = None,
 ) -> FastAPI:
     """Build the application.
 
@@ -77,6 +81,20 @@ def create_app(
         authorization: str | None = Header(default=None),
         x_server_id: str | None = Header(default=None),
     ) -> str:
+        """Resolve the calling tenant.
+
+        A persisted tenant store wins over the in-memory list, because the store is what the console edits:
+        rotating a key there must take effect on the next request, not at the next restart.
+        """
+        if tenant_store is not None:
+            scheme, _, token = (authorization or "").partition(" ")
+            if scheme.lower() != "bearer" or not token or not x_server_id:
+                raise HTTPException(status_code=401, detail="missing credentials")
+            tenant_id = tenant_store.authenticate(token, x_server_id)
+            if tenant_id is None:
+                raise HTTPException(status_code=401, detail="unknown or revoked credentials")
+            return tenant_id
+
         if tenant_registry is None:
             return "local"
         return tenant_registry.authenticate(authorization, x_server_id)
@@ -217,5 +235,13 @@ def create_app(
             "player_hash": player_hash,
             "deleted": removed,
         }
+
+    if admin_router is not None:
+        app.include_router(admin_router)
+
+    if static_directory is not None:
+        # Mounted after the router on purpose: routes match in registration order, so /admin/api/* must be
+        # claimed before the static mount at /admin swallows it.
+        app.mount("/admin", StaticFiles(directory=static_directory, html=True), name="admin")
 
     return app

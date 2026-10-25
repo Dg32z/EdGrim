@@ -74,13 +74,10 @@ def test_the_composition_root_produces_a_serving_app() -> None:
     assert "watchneko_samples_total" in response.text
 
 
-def test_the_composition_root_wires_authentication_when_tenants_are_configured() -> None:
-    service = build_service(
-        Settings(
-            tenants=[Tenant(tenant_id="t1", api_key="k1", servers=frozenset({"s1"}))],
-            database_path=":memory:",
-        )
-    )
+def test_the_composition_root_wires_authentication_through_the_tenant_store() -> None:
+    """Tenants now live in a table the console edits, not in an environment variable."""
+    service = build_service(Settings(tenants=[], database_path=":memory:"))
+    _, key = service.tenants.create("t1", servers=["s1"])
     client = TestClient(service.app)
 
     refused = client.post(
@@ -91,7 +88,7 @@ def test_the_composition_root_wires_authentication_when_tenants_are_configured()
     allowed = client.post(
         "/v1/inference",
         json={"contract_version": 1, "samples": []},
-        headers={"authorization": "Bearer k1", "x-server-id": "s1"},
+        headers={"authorization": f"Bearer {key}", "x-server-id": "s1"},
     )
 
     assert refused.status_code == 401

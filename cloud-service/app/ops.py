@@ -51,6 +51,17 @@ class OpsCycle:
     #: Called with the new model whenever the published pointer moves, so serving follows publication.
     on_model_changed: object = None
 
+    def rollback_now(self) -> TrainedModel | None:
+        """Roll back on demand, from the console rather than from a health check.
+
+        Shares the same path as the automatic rollback so the two can never disagree about what a rollback
+        means — the operator's button and the health check do exactly the same thing.
+        """
+        outcome = self._roll_back(CycleOutcome(), "manual rollback from the console")
+        if outcome.rolled_back is None:
+            return None
+        return self.publisher.current()
+
     def run_once(self, tenants: list[str]) -> CycleOutcome:
         outcome = CycleOutcome()
 

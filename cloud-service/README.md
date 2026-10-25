@@ -42,6 +42,39 @@ docker compose up -d
 **`WATCHNEKO_TENANTS` 为空等于没有认证**：每个调用者都被当作同一个本地租户。这在 localhost 上没问题，
 一旦端口对外可达就是错的——`run.py` 会在启动时为此打一条 warning。
 
+## 管理控制台
+
+启动后访问 `http://<host>:8000/admin/`。界面用 Material Design 3 的 token 层手写（Web 端的 MD3
+Expressive 组件集并不存在，Material Web 处于维护模式），无构建步骤，由 FastAPI 直接托管静态文件。
+
+**四个视图**：仪表盘（五类指标 + 裁决分布 + 模型操作）、租户（增删改查 + 密钥轮换/吊销）、
+数据集、模型历史（含回滚状态）。
+
+**两种凭据是分开的**，这是刻意的：
+
+| 凭据 | 谁用 | 能做什么 |
+| --- | --- | --- |
+| 租户 API key | 插件 | 上传样本、请求裁决 |
+| 管理员登录 | 人 | 改租户、轮换密钥、回滚模型 |
+
+插件手里的 key 不能开控制台——否则一个被攻破的服务器就能吊销所有租户。
+
+管理员凭据走环境变量：
+
+| 变量 | 说明 |
+| --- | --- |
+| `WATCHNEKO_ADMIN_USERNAME` | 默认 `admin` |
+| `WATCHNEKO_ADMIN_PASSWORD` | **不设则整个 `/admin` 不挂载** |
+| `WATCHNEKO_ADMIN_SECRET` | 会话签名密钥；不设则每次重启生成随机值，所有会话失效 |
+
+### 密钥的生命周期
+
+租户与密钥存在 SQLite 的 `tenants` 表里，密钥**只存 SHA-256 摘要**，明文仅在创建或轮换时显示一次。
+所以界面上有「复制」按钮，关掉对话框就再也拿不到——这是设计，不是缺陷。
+
+轮换会**立即**让旧 key 失效，没有重叠期。正在用旧 key 的服务器会立刻开始 401，这一点在轮换确认框里
+写明了。
+
 ## 模块
 
 ```
@@ -100,7 +133,7 @@ codesign --force --sign - "$LGB"          # install_name_tool 会破坏签名
 ## 跑测试
 
 ```bash
-.venv/bin/python -m pytest        # 128 个用例
+.venv/bin/python -m pytest        # 177 个用例
 ```
 
 ## 有意保留的限制

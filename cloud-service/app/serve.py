@@ -12,6 +12,10 @@ from dataclasses import dataclass
 
 from fastapi import FastAPI
 
+from pathlib import Path
+
+from app.admin_api import create_admin_router
+from app.admin_auth import AdminAuth
 from app.config import Settings
 from app.main import create_app
 from app.metrics import Metrics
@@ -21,6 +25,7 @@ from app.publish import ModelPublisher
 from app.quota import QuotaLimiter
 from app.scheduler import PeriodicOps, apply_to_registry
 from app.store import SampleStore
+from app.tenants import TenantStore
 from app.train import available_trainers
 
 logger = logging.getLogger(__name__)
@@ -32,7 +37,9 @@ class Service:
     registry: ModelRegistry
     metrics: Metrics
     store: SampleStore
+    tenants: TenantStore
     ops: PeriodicOps
+    admin: AdminAuth | None
 
 
 def build_service(settings: Settings, trainer_name: str | None = None) -> Service:
@@ -42,6 +49,7 @@ def build_service(settings: Settings, trainer_name: str | None = None) -> Servic
     documents what that means. A deployment serving other people configures it.
     """
     store = SampleStore(path=settings.database_path, retention_days=settings.retention_days)
+    tenants = TenantStore(path=settings.database_path)
     metrics = Metrics()
     registry = ModelRegistry()
 
@@ -60,22 +68,63 @@ def build_service(settings: Settings, trainer_name: str | None = None) -> Servic
         on_model_changed=apply_to_registry(registry),
     )
 
+    # The quota ceiling comes from the tenant's own row, so the console can change one tenant's limit
+    # without touching anyone else's.
+    def limit_for(tenant_id: str) -> int | None:
+        record = tenants.get(tenant_id)
+        return None if record is None else record.quota_per_minute
+
+    admin_auth = None
+    admin_router = None
+    static_directory = None
+    if settings.has_admin_password:
+        admin_auth = AdminAuth(
+            username=settings.admin_username,
+            password=settings.admin_password,
+            secret=settings.admin_secret or None,
+        )
+        admin_router = create_admin_router(
+            auth=admin_auth,
+            tenants=tenants,
+            metrics=metrics,
+            store=store,
+            publisher=cycle.publisher,
+            registry=registry,
+            ops=cycle,
+        )
+        candidate = Path(__file__).parent / "static"
+        if candidate.is_dir():
+            static_directory = str(candidate)
+
     app = create_app(
         registry=registry,
         store=store,
-        quota=QuotaLimiter(samples_per_minute=settings.quota_per_minute),
+        quota=QuotaLimiter(
+            samples_per_minute=settings.quota_per_minute, limit_resolver=limit_for
+        ),
         metrics=metrics,
         tenants=settings.tenants or None,
+        tenant_store=tenants,
+        admin_router=admin_router,
+        static_directory=static_directory,
     )
 
     ops = PeriodicOps(
         cycle=cycle,
-        tenants=[tenant.tenant_id for tenant in settings.tenants],
+        tenants=lambda: [record.tenant_id for record in tenants.list() if not record.is_revoked],
         interval_seconds=settings.retrain_interval_seconds,
         metrics=metrics,
     )
 
-    return Service(app=app, registry=registry, metrics=metrics, store=store, ops=ops)
+    return Service(
+        app=app,
+        registry=registry,
+        metrics=metrics,
+        store=store,
+        tenants=tenants,
+        ops=ops,
+        admin=admin_auth,
+    )
 
 
 def build_app(settings: Settings, trainer_name: str | None = None) -> FastAPI:
