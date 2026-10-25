@@ -52,7 +52,9 @@ dependencies {
         isTransitive = false // messes with guava otherwise
     }
 
-    compileOnly(libs.floodgate.api)
+    compileOnly(libs.floodgate.api) {
+        isTransitive = false // org.geysermc:common snapshot is no longer published; only FloodgateApi is needed
+    }
     compileOnly(libs.via.version.api)
     compileOnly(libs.netty)
     compileOnly(libs.paper.api)
