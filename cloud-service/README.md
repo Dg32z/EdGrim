@@ -134,10 +134,41 @@ codesign --force --sign - "$LGB"          # install_name_tool 会破坏签名
 
 第 2 条是开发机上实际走的路径（沙箱不允许写 `/usr/local`），`import`、训练、booster 序列化与重建均已验证。
 
+## 部署
+
+`deploy.sh` 把「本地测试通过才上线」写成了代码，而不是靠记性：
+
+```bash
+./deploy.sh root@<host> /opt/watchneko-cloud-analysis            # 部署
+./deploy.sh root@<host> /opt/watchneko-cloud-analysis --check    # 只核对，不上传
+
+SSH_PORT=46011 ./deploy.sh root@<host> /opt/watchneko-cloud-analysis
+SSH_EXTRA_OPTS="-o StrictHostKeyChecking=accept-new" ./deploy.sh ...
+```
+
+四步，任何一步失败即中止：
+
+1. **跑测试** —— 不过就不发一个字节
+2. 计算本地代码指纹
+3. 上传（`.venv`、`config.yaml`、数据库、`tests/` 都不进包）
+4. 重算服务器指纹逐文件比对 —— 不一致即报错
+
+主机密钥的信任策略刻意不写死在脚本里，用 `SSH_EXTRA_OPTS` 由你的机器决定。
+
+### MCSManager
+
+实例类型选**应用实例**，启动命令：
+
+```
+bash /opt/watchneko-cloud-analysis/start.sh
+```
+
+`start.sh` 用 `BASH_SOURCE` 推导自身目录，不硬编码路径——MCSManager 会把工作目录设成实例目录，相对路径在那儿会指错地方。它也 `exec` 掉 shell，SIGTERM 才能直达 uvicorn 完成优雅关闭。
+
 ## 跑测试
 
 ```bash
-.venv/bin/python -m pytest        # 197 个用例
+.venv/bin/python -m pytest        # 214 个用例
 ```
 
 ## 有意保留的限制
