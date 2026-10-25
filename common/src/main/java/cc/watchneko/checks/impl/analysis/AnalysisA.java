@@ -123,9 +123,12 @@ public final class AnalysisA extends Check implements RotationCheck, AttackSigna
                 continue;
             }
 
+            // The sample id is derived from the tenant-salted hash, never from the raw UUID: the id travels
+            // on the wire, and the whole point of hashing is that nothing identifying leaves the server.
+            final String playerHash = gateway.playerHash(player.uuid);
             final FeatureSample sample = new FeatureSample(
-                    player.uuid + "-" + (++sampleCounter),
-                    gateway.playerHash(player.uuid),
+                    SampleIdentity.of(playerHash, ++sampleCounter),
+                    playerHash,
                     extracted.get().features());
 
             // A player being recorded is producing training data, not evidence. The sample goes to the

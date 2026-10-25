@@ -28,6 +28,7 @@ class Settings:
     retention_days: int = DEFAULT_RETENTION_DAYS
     retrain_interval_seconds: float = DEFAULT_RETRAIN_INTERVAL_SECONDS
     database_path: str = "watchneko.db"
+    trainer: str = "logistic"
 
     @property
     def is_authenticated(self) -> bool:
@@ -70,4 +71,5 @@ def load_settings(environ: dict[str, str] | None = None) -> Settings:
             source.get("WATCHNEKO_RETRAIN_INTERVAL_SECONDS", DEFAULT_RETRAIN_INTERVAL_SECONDS)
         ),
         database_path=source.get("WATCHNEKO_DATABASE_PATH", "watchneko.db"),
+        trainer=source.get("WATCHNEKO_TRAINER", "logistic"),
     )

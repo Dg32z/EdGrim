@@ -70,7 +70,8 @@ public final class CloudClient {
         JsonObject body = new JsonObject();
         body.addProperty("contract_version", CloudContract.CONTRACT_VERSION);
         body.addProperty("recording_session_id", recordingSessionId);
-        body.add("label", CloudJson.toTree(label));        body.add("samples", samplesToJson(samples));
+        body.add("label", CloudJson.toTree(label));
+        body.add("samples", samplesToJson(samples));
 
         CloudResponse response = transport.exchange(
                 new CloudRequest("POST", CloudContract.SAMPLES_PATH, headers(true), CloudJson.write(body)));

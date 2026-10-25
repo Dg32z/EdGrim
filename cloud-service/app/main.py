@@ -61,7 +61,10 @@ def create_app(
     must configure tenants, because otherwise anyone who can reach the port can write into the dataset.
     """
     active_registry = registry if registry is not None else ModelRegistry.with_default_model()
-    active_scorer = scorer if scorer is not None else StubScorer()
+    if scorer is not None and active_registry.current() is not None:
+        # An explicitly supplied scorer becomes the registry's scorer, so there is exactly one place that
+        # decides what answers.
+        active_registry.set(active_registry.current(), scorer)
     tenant_registry = TenantRegistry(tenants) if tenants is not None else None
     sample_store = store if store is not None else SampleStore()
     active_quota = quota
@@ -77,6 +80,21 @@ def create_app(
         if tenant_registry is None:
             return "local"
         return tenant_registry.authenticate(authorization, x_server_id)
+
+    @app.exception_handler(Exception)
+    async def unhandled(request: Request, exc: Exception) -> JSONResponse:
+        """Record the failure, then answer in the contract's error shape.
+
+        Without this the error rate can only ever count retrain failures, which would leave the rollback
+        decision blind to the failure mode it most needs to see: requests that stop being answerable.
+        """
+        active_metrics.record_error()
+        return JSONResponse(
+            status_code=500,
+            content=ErrorResponse(
+                contract_version=CONTRACT_VERSION, error="internal_error"
+            ).model_dump(),
+        )
 
     @app.exception_handler(RequestValidationError)
     async def invalid_request(request: Request, exc: RequestValidationError) -> JSONResponse:
@@ -124,9 +142,13 @@ def create_app(
             # The plugin never gets here: a cold start disables the check before it sends anything.
             return _no_model()
 
+        # The scorer comes from the registry, not from a fixed field: publication and rollback both move it,
+        # so what answers is always the model the metrics name.
+        scorer = active_registry.scorer()
+
         verdicts = []
         for sample in payload.samples:
-            score = active_scorer.score(sample.features)
+            score = scorer.score(sample.features)
             verdicts.append(
                 Verdict(
                     sample_id=sample.sample_id,

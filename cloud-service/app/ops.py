@@ -92,10 +92,15 @@ class OpsCycle:
 
             if current is not None and dataset.dataset_id == current.dataset_id:
                 outcome.skipped = "dataset unchanged since the published model"
+                self.metrics.queue_backlog = 0
                 continue
+
+            # Everything in this dataset is about to be trained on, so it is no longer backlog.
+            self.metrics.queue_backlog = len(dataset.samples)
 
             model = train_model(dataset, self.trainer)
             self.publisher.publish(model)
+            self.metrics.queue_backlog = 0
             self.metrics.record_publish(model.model_id, model.dataset_id)
             self._notify(model)
             outcome.published = model

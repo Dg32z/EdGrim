@@ -7,6 +7,7 @@ everything else takes what it is given.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 
 from fastapi import FastAPI
@@ -22,6 +23,8 @@ from app.scheduler import PeriodicOps, apply_to_registry
 from app.store import SampleStore
 from app.train import available_trainers
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class Service:
@@ -32,7 +35,7 @@ class Service:
     ops: PeriodicOps
 
 
-def build_service(settings: Settings, trainer_name: str = "logistic") -> Service:
+def build_service(settings: Settings, trainer_name: str | None = None) -> Service:
     """Assemble the service from settings.
 
     The tenant list being empty is not an error here — it is the development posture, and `create_app`
@@ -43,13 +46,16 @@ def build_service(settings: Settings, trainer_name: str = "logistic") -> Service
     registry = ModelRegistry()
 
     trainers = available_trainers()
-    if trainer_name not in trainers:
-        trainer_name = "logistic"
+    requested = trainer_name or settings.trainer
+    if requested not in trainers:
+        # Falling back silently would make "which backend trained this?" unanswerable from the outside.
+        logger.warning("trainer %r unavailable; falling back to logistic", requested)
+        requested = "logistic"
 
     cycle = OpsCycle(
         store=store,
         publisher=ModelPublisher(),
-        trainer=trainers[trainer_name],
+        trainer=trainers[requested],
         metrics=metrics,
         on_model_changed=apply_to_registry(registry),
     )
@@ -72,6 +78,6 @@ def build_service(settings: Settings, trainer_name: str = "logistic") -> Service
     return Service(app=app, registry=registry, metrics=metrics, store=store, ops=ops)
 
 
-def build_app(settings: Settings, trainer_name: str = "logistic") -> FastAPI:
+def build_app(settings: Settings, trainer_name: str | None = None) -> FastAPI:
     """The application alone, for `uvicorn --factory`."""
     return build_service(settings, trainer_name).app

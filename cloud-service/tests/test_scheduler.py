@@ -133,3 +133,70 @@ def test_an_unservable_artifact_leaves_the_previous_model_answering() -> None:
     apply(unservable)
 
     assert registry.current().model_id == before, "an unservable model must not take serving offline"
+
+
+def test_inference_actually_serves_the_published_model() -> None:
+    """The bug this guards: the app used to hold a fixed stub scorer, so publishing changed nothing."""
+    from fastapi.testclient import TestClient
+
+    from app.main import create_app
+
+    store = SampleStore()
+    seed(store)
+    cycle, registry = build(store)
+    cycle.run_once([TENANT])
+
+    client = TestClient(create_app(registry=registry, store=store))
+    response = client.post(
+        "/v1/inference",
+        json={
+            "contract_version": 1,
+            "samples": [
+                {"sample_id": "cheaty", "player_hash": "h", "features": features(0.8)},
+                {"sample_id": "clean", "player_hash": "h", "features": features(0.2)},
+            ],
+        },
+        headers={"authorization": "Bearer k", "x-server-id": "s"},
+    )
+
+    assert response.status_code == 200
+    scores = {v["sample_id"]: v["score"] for v in response.json()["verdicts"]}
+    assert scores["cheaty"] > scores["clean"], "the published model must separate the classes it was trained on"
+    assert scores["cheaty"] > 0.5
+
+
+def test_a_cold_start_still_reports_no_model() -> None:
+    from fastapi.testclient import TestClient
+
+    from app.main import create_app
+    from app.model import ModelRegistry
+
+    client = TestClient(create_app(registry=ModelRegistry.cold_start(), store=SampleStore()))
+
+    response = client.post(
+        "/v1/inference",
+        json={"contract_version": 1, "samples": []},
+        headers={"authorization": "Bearer k", "x-server-id": "s"},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["error"] == "no_model"
+
+
+def test_the_queue_backlog_reports_samples_not_yet_trained_on() -> None:
+    store = SampleStore()
+    seed(store)
+    metrics = Metrics()
+    cycle, _ = build(store, metrics)
+
+    cycle.run_once([TENANT])
+
+    assert metrics.queue_backlog == 0, "a published model has no backlog left"
+
+    store.record(
+        TENANT, "s1", "rs-cheat", "cheat",
+        [{"sample_id": "c-new", "player_hash": "h", "features": features(0.9)}],
+    )
+    cycle.run_once([TENANT])
+
+    assert metrics.queue_backlog == 0, "the new samples were trained on in this same cycle"
