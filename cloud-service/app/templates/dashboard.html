@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="stack">
+    <div class="grid" id="metric-grid" aria-live="polite"></div>
+
+    <section class="card card--outlined">
+        <span class="card__label">裁决分布</span>
+        <div id="verdict-body"></div>
+    </section>
+
+    <section class="card card--outlined">
+        <div class="section-head">
+            <span class="section-head__title">模型操作</span>
+            <button class="btn btn--outlined" type="button" id="rollback-button">
+                <span class="material-symbols-outlined" aria-hidden="true">undo</span>
+                回滚模型
+            </button>
+            <button class="btn btn--tonal" type="button" id="retrain-button">
+                <span class="material-symbols-outlined" aria-hidden="true">model_training</span>
+                立即重训
+            </button>
+        </div>
+        <p class="card__hint" id="model-summary">加载中…</p>
+    </section>
+</div>
+{% endblock %}
+{% block script %}
+<script type="module" src="/admin/assets/page-dashboard.js"></script>
+{% endblock %}

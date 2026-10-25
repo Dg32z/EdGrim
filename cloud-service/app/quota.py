@@ -13,19 +13,34 @@ from __future__ import annotations
 
 import time
 from collections import deque
+from typing import Callable
 
 
 class QuotaLimiter:
     """A sliding one-minute window of accepted samples, per tenant."""
 
-    def __init__(self, samples_per_minute: int, window_seconds: float = 60.0) -> None:
+    def __init__(
+        self,
+        samples_per_minute: int,
+        window_seconds: float = 60.0,
+        limit_resolver: Callable[[str], int | None] | None = None,
+    ) -> None:
         if samples_per_minute < 1:
             raise ValueError("samples_per_minute must be positive")
         if window_seconds <= 0:
             raise ValueError("window_seconds must be positive")
         self._limit = samples_per_minute
         self._window = window_seconds
+        self._limit_resolver = limit_resolver
         self._usage: dict[str, deque[tuple[float, int]]] = {}
+
+    def limit_for(self, tenant_id: str) -> int:
+        """This tenant's ceiling: its own configured quota if it has one, else the default."""
+        if self._limit_resolver is not None:
+            resolved = self._limit_resolver(tenant_id)
+            if resolved is not None and resolved > 0:
+                return resolved
+        return self._limit
 
     @property
     def limit(self) -> int:
@@ -48,7 +63,7 @@ class QuotaLimiter:
         stamp = now if now is not None else time.monotonic()
         self._evict(tenant_id, stamp)
 
-        if self.used(tenant_id, stamp) + count > self._limit:
+        if self.used(tenant_id, stamp) + count > self.limit_for(tenant_id):
             return False
 
         if count:

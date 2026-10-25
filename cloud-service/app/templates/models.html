@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="stack">
+    <div class="section-head">
+        <span class="section-head__title">模型历史</span>
+        <button class="btn btn--outlined" type="button" id="rollback-button">
+            <span class="material-symbols-outlined" aria-hidden="true">undo</span>
+            回滚到上一个
+        </button>
+    </div>
+
+    <div class="table-wrap" id="model-table">
+        <p class="empty">加载中…</p>
+    </div>
+
+    <p class="card__hint">
+        回滚不删除任何版本：被回滚的模型仍然保留并可原样服务，这正是回滚安全的原因。
+    </p>
+</div>
+{% endblock %}
+{% block script %}
+<script type="module" src="/admin/assets/page-models.js"></script>
+{% endblock %}

@@ -3,16 +3,11 @@ services:
     build: ./cloud-service
     ports:
       - "8000:8000"
-    environment:
-      # A JSON array of tenants. Empty means "development posture": every caller is one local tenant,
-      # which is fine on localhost and wrong the moment this port is reachable from elsewhere.
-      WATCHNEKO_TENANTS: '[]'
-      WATCHNEKO_QUOTA_PER_MINUTE: "6000"
-      WATCHNEKO_RETENTION_DAYS: "90"
-      WATCHNEKO_RETRAIN_INTERVAL_SECONDS: "3600"
-      WATCHNEKO_DATABASE_PATH: "/data/watchneko.db"
     volumes:
+      # 一个卷装下配置与数据库：首次启动会在这里生成 config.yaml，
+      # 里面带着随机的管理员密码与会话密钥。
       - watchneko-data:/data
+    command: ["python", "run.py", "--config", "/data/config.yaml"]
     restart: unless-stopped
 
 volumes:

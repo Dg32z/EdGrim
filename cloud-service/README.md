@@ -25,28 +25,65 @@ docker compose up -d
 
 ## 配置
 
-全部走环境变量，每一项都有默认值。
+**没有环境变量。** 服务读取一个 YAML 文件，**首次启动时自动生成**，之后不再覆盖——改完重启生效。
 
-| 变量 | 默认 | 说明 |
-| --- | --- | --- |
-| `WATCHNEKO_TENANTS` | `[]` | 租户 JSON 数组，见下 |
-| `WATCHNEKO_QUOTA_PER_MINUTE` | `6000` | 每租户每分钟可用的样本数 |
-| `WATCHNEKO_RETENTION_DAYS` | `90` | 样本保留期；由重训周期顺带清理 |
-| `WATCHNEKO_RETRAIN_INTERVAL_SECONDS` | `3600` | 重训周期 |
-| `WATCHNEKO_DATABASE_PATH` | `watchneko.db` | SQLite 路径；容器内是 `/data/watchneko.db` |
-
-```json
-[{"tenant_id": "t-survival", "api_key": "…", "servers": ["survival-1", "survival-2"]}]
+```bash
+.venv/bin/python run.py                      # 默认读 cloud-service/config.yaml
+.venv/bin/python run.py --config /etc/wn.yaml
 ```
 
-**`WATCHNEKO_TENANTS` 为空等于没有认证**：每个调用者都被当作同一个本地租户。这在 localhost 上没问题，
-一旦端口对外可达就是错的——`run.py` 会在启动时为此打一条 warning。
+首次启动会打印：
+
+```
+WARNING 已生成配置文件 .../cloud-service/config.yaml
+WARNING 管理员账号 admin，密码 7gLR7JAJZC0D2rSOfFOzEJam
+WARNING 请修改密码后重启；该密码只在这里和配置文件里出现。
+```
+
+生成的文件长这样，每一项都带注释：
+
+```yaml
+server:
+  host: 0.0.0.0
+  port: 8000
+
+admin:
+  username: admin
+  password: "首次生成时随机产生"      # 请改成你自己的
+  secret: "会话签名密钥"              # 改动会让所有登录会话失效
+  session_hours: 8
+
+database:
+  path: watchneko.db                 # 相对路径以本文件所在目录为准
+  retention_days: 90
+
+quota:
+  samples_per_minute: 6000           # 新租户的默认配额
+
+training:
+  trainer: logistic                  # logistic | lightgbm
+  interval_seconds: 3600             # 设为 0 关闭自动重训
+```
+
+删掉任意一项会退回默认值；`port: 0` 这类非法值会在启动时报错并指出是哪一项。
+
+**`config.yaml` 与数据库都不进版本库**（已在 `.gitignore` 里）——前者含明文密码。
+
+Docker 下整份配置和数据都在一个卷里：
+
+```bash
+docker compose up -d          # 首次启动在 /data/config.yaml 生成配置
+docker compose logs cloud     # 这里能看到生成的管理员密码
+```
 
 ## 模块
 
 ```
 app/
   main.py       三个契约端点 + /metrics；create_app 只接受注入，不自己造依赖
+  console.py    控制台页面路由（服务端会话守卫）
+  templates/    每视图一个文档 + 共用外壳 base.html
+  static/       md3.css、console.js、page-*.js
   schemas.py    线上形状（pydantic），未知字段一律拒绝
   auth.py       租户 API key + server-id；401（不知道你是谁）与 403（知道但无权）分开
   quota.py      按样本数计的滑动窗口，全有或全无
@@ -100,7 +137,7 @@ codesign --force --sign - "$LGB"          # install_name_tool 会破坏签名
 ## 跑测试
 
 ```bash
-.venv/bin/python -m pytest        # 128 个用例
+.venv/bin/python -m pytest        # 197 个用例
 ```
 
 ## 有意保留的限制

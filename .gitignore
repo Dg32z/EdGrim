@@ -94,3 +94,10 @@ fabric/run/
 
 # git worktrees used during implementation
 .worktrees/
+
+# 服务首次启动时自动生成的配置与数据库。config.yaml 里有随机的管理员密码，
+# 绝不能进版本库。
+cloud-service/config.yaml
+cloud-service/*.db
+cloud-service/*.db-wal
+cloud-service/*.db-shm

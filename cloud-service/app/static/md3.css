@@ -1,0 +1,728 @@
+/* Material Design 3 tokens and the components this console needs.
+ *
+ * Every colour, radius and type style below comes from a token. Nothing outside this file names a raw
+ * colour, which is what keeps dark mode and any future dynamic-colour scheme a one-file change.
+ *
+ * Web has no MD3 Expressive component set (Material Web is maintenance-only), so the components here are
+ * built on the token layer directly rather than pulling a component library that would not match anyway.
+ */
+
+/* ---------------------------------------------------------------- tokens: light */
+
+:root {
+    /* Colour roles — baseline MD3 purple seed. */
+    --md-sys-color-primary: #6750a4;
+    --md-sys-color-on-primary: #ffffff;
+    --md-sys-color-primary-container: #eaddff;
+    --md-sys-color-on-primary-container: #21005d;
+    --md-sys-color-secondary: #625b71;
+    --md-sys-color-on-secondary: #ffffff;
+    --md-sys-color-secondary-container: #e8def8;
+    --md-sys-color-on-secondary-container: #1d192b;
+    --md-sys-color-tertiary: #7d5260;
+    --md-sys-color-on-tertiary: #ffffff;
+    --md-sys-color-tertiary-container: #ffd8e4;
+    --md-sys-color-on-tertiary-container: #31111d;
+    --md-sys-color-error: #b3261e;
+    --md-sys-color-on-error: #ffffff;
+    --md-sys-color-error-container: #f9dedc;
+    --md-sys-color-on-error-container: #410e0b;
+
+    --md-sys-color-surface: #fef7ff;
+    --md-sys-color-on-surface: #1d1b20;
+    --md-sys-color-on-surface-variant: #49454f;
+    --md-sys-color-surface-container-lowest: #ffffff;
+    --md-sys-color-surface-container-low: #f7f2fa;
+    --md-sys-color-surface-container: #f3edf7;
+    --md-sys-color-surface-container-high: #ece6f0;
+    --md-sys-color-surface-container-highest: #e6e0e9;
+    --md-sys-color-surface-dim: #ded8e1;
+    --md-sys-color-surface-bright: #fef7ff;
+
+    --md-sys-color-outline: #79747e;
+    --md-sys-color-outline-variant: #cac4d0;
+
+    --md-sys-color-inverse-surface: #322f35;
+    --md-sys-color-inverse-on-surface: #f5eff7;
+    --md-sys-color-inverse-primary: #d0bcff;
+
+    /* Type scale — Roboto Flex is the correct MD3 default, not a fallback to avoid. */
+    --md-sys-typescale-font: "Roboto Flex", "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --md-sys-typescale-mono: "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    --md-sys-typescale-display-small: 400 2.25rem/2.75rem var(--md-sys-typescale-font);
+    --md-sys-typescale-headline-small: 400 1.5rem/2rem var(--md-sys-typescale-font);
+    --md-sys-typescale-title-large: 400 1.375rem/1.75rem var(--md-sys-typescale-font);
+    --md-sys-typescale-title-medium: 500 1rem/1.5rem var(--md-sys-typescale-font);
+    --md-sys-typescale-title-small: 500 0.875rem/1.25rem var(--md-sys-typescale-font);
+    --md-sys-typescale-body-large: 400 1rem/1.5rem var(--md-sys-typescale-font);
+    --md-sys-typescale-body-medium: 400 0.875rem/1.25rem var(--md-sys-typescale-font);
+    --md-sys-typescale-body-small: 400 0.75rem/1rem var(--md-sys-typescale-font);
+    --md-sys-typescale-label-large: 500 0.875rem/1.25rem var(--md-sys-typescale-font);
+    --md-sys-typescale-label-medium: 500 0.75rem/1rem var(--md-sys-typescale-font);
+
+    /* Shape */
+    --md-sys-shape-corner-none: 0;
+    --md-sys-shape-corner-extra-small: 4px;
+    --md-sys-shape-corner-small: 8px;
+    --md-sys-shape-corner-medium: 12px;
+    --md-sys-shape-corner-large: 16px;
+    --md-sys-shape-corner-large-increased: 20px;
+    --md-sys-shape-corner-extra-large: 28px;
+    --md-sys-shape-corner-full: 9999px;
+
+    /* Spacing — the 8dp system, so layout can adapt programmatically. */
+    --md-sys-spacing-1: 4px;
+    --md-sys-spacing-2: 8px;
+    --md-sys-spacing-3: 12px;
+    --md-sys-spacing-4: 16px;
+    --md-sys-spacing-5: 24px;
+    --md-sys-spacing-6: 32px;
+    --md-sys-spacing-7: 48px;
+
+    /* Motion — easing and duration for transitions (Expressive springs are not available on web). */
+    --md-sys-motion-emphasized: cubic-bezier(0.2, 0, 0, 1);
+    --md-sys-motion-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+    --md-sys-motion-standard: cubic-bezier(0.2, 0, 0, 1);
+    --md-sys-motion-duration-short: 200ms;
+    --md-sys-motion-duration-medium: 300ms;
+
+    color-scheme: light;
+}
+
+/* ---------------------------------------------------------------- tokens: dark */
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --md-sys-color-primary: #d0bcff;
+        --md-sys-color-on-primary: #381e72;
+        --md-sys-color-primary-container: #4f378b;
+        --md-sys-color-on-primary-container: #eaddff;
+        --md-sys-color-secondary: #ccc2dc;
+        --md-sys-color-on-secondary: #332d41;
+        --md-sys-color-secondary-container: #4a4458;
+        --md-sys-color-on-secondary-container: #e8def8;
+        --md-sys-color-tertiary: #efb8c8;
+        --md-sys-color-on-tertiary: #492532;
+        --md-sys-color-tertiary-container: #633b48;
+        --md-sys-color-on-tertiary-container: #ffd8e4;
+        --md-sys-color-error: #f2b8b5;
+        --md-sys-color-on-error: #601410;
+        --md-sys-color-error-container: #8c1d18;
+        --md-sys-color-on-error-container: #f9dedc;
+
+        --md-sys-color-surface: #141218;
+        --md-sys-color-on-surface: #e6e0e9;
+        --md-sys-color-on-surface-variant: #cac4d0;
+        --md-sys-color-surface-container-lowest: #0f0d13;
+        --md-sys-color-surface-container-low: #1d1b20;
+        --md-sys-color-surface-container: #211f26;
+        --md-sys-color-surface-container-high: #2b2930;
+        --md-sys-color-surface-container-highest: #36343b;
+        --md-sys-color-surface-dim: #141218;
+        --md-sys-color-surface-bright: #3b383e;
+
+        --md-sys-color-outline: #938f99;
+        --md-sys-color-outline-variant: #49454f;
+
+        --md-sys-color-inverse-surface: #e6e0e9;
+        --md-sys-color-inverse-on-surface: #322f35;
+        --md-sys-color-inverse-primary: #6750a4;
+
+        color-scheme: dark;
+    }
+}
+
+/* ---------------------------------------------------------------- base */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    height: 100%;
+}
+
+body {
+    background: var(--md-sys-color-surface);
+    color: var(--md-sys-color-on-surface);
+    font: var(--md-sys-typescale-body-large);
+    -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, p {
+    margin: 0;
+}
+
+code, .mono {
+    font-family: var(--md-sys-typescale-mono);
+    font-size: 0.8125rem;
+}
+
+[hidden] {
+    display: none !important;
+}
+
+/* ---------------------------------------------------------------- app shell */
+
+.app {
+    display: grid;
+    grid-template-columns: 88px 1fr;
+    min-height: 100vh;
+}
+
+/* Navigation rail — the medium/large window pattern. */
+.rail {
+    background: var(--md-sys-color-surface);
+    border-right: 1px solid var(--md-sys-color-outline-variant);
+    padding: var(--md-sys-spacing-3) 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--md-sys-spacing-2);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+}
+
+.rail__brand {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--md-sys-shape-corner-full);
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+    display: grid;
+    place-items: center;
+    font: var(--md-sys-typescale-title-medium);
+    margin-bottom: var(--md-sys-spacing-2);
+}
+
+.rail__item {
+    width: 64px;
+    padding: var(--md-sys-spacing-2) 0;
+    border: 0;
+    background: none;
+    border-radius: var(--md-sys-shape-corner-large);
+    color: var(--md-sys-color-on-surface-variant);
+    font: var(--md-sys-typescale-label-medium);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--md-sys-spacing-1);
+    cursor: pointer;
+    transition: background var(--md-sys-motion-duration-short) var(--md-sys-motion-standard);
+}
+
+.rail__item:hover {
+    background: var(--md-sys-color-surface-container-high);
+}
+
+.rail__item[aria-current="page"] {
+    background: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container);
+}
+
+.rail__item .material-symbols-outlined {
+    font-size: 24px;
+}
+
+.main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.top-bar {
+    height: 64px;
+    display: flex;
+    align-items: center;
+    gap: var(--md-sys-spacing-4);
+    padding: 0 var(--md-sys-spacing-5);
+    background: var(--md-sys-color-surface);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.top-bar__title {
+    font: var(--md-sys-typescale-title-large);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.content {
+    flex: 1;
+    padding: 0 var(--md-sys-spacing-5) var(--md-sys-spacing-7);
+    /* Readable measure on large windows: endless-width text lines are unreadable. */
+    max-width: 1040px;
+    width: 100%;
+}
+
+.stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--md-sys-spacing-4);
+}
+
+/* ---------------------------------------------------------------- buttons */
+
+.btn {
+    min-height: 40px;
+    padding: 0 var(--md-sys-spacing-5);
+    border-radius: var(--md-sys-shape-corner-full);
+    border: 1px solid transparent;
+    font: var(--md-sys-typescale-label-large);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--md-sys-spacing-2);
+    cursor: pointer;
+    transition: background var(--md-sys-motion-duration-short) var(--md-sys-motion-standard),
+        box-shadow var(--md-sys-motion-duration-short) var(--md-sys-motion-standard);
+}
+
+.btn:disabled {
+    opacity: 0.38;
+    cursor: not-allowed;
+}
+
+.btn--filled {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+}
+
+.btn--filled:hover:not(:disabled) {
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
+}
+
+.btn--tonal {
+    background: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container);
+}
+
+.btn--outlined {
+    background: transparent;
+    border-color: var(--md-sys-color-outline);
+    color: var(--md-sys-color-primary);
+}
+
+.btn--text {
+    background: transparent;
+    color: var(--md-sys-color-primary);
+    padding: 0 var(--md-sys-spacing-3);
+}
+
+.btn--danger {
+    background: var(--md-sys-color-error);
+    color: var(--md-sys-color-on-error);
+}
+
+.btn--text.btn--danger {
+    background: transparent;
+    color: var(--md-sys-color-error);
+}
+
+.btn--small {
+    min-height: 32px;
+    padding: 0 var(--md-sys-spacing-3);
+    font: var(--md-sys-typescale-label-medium);
+}
+
+/* ---------------------------------------------------------------- cards */
+
+.card {
+    background: var(--md-sys-color-surface-container-low);
+    border-radius: var(--md-sys-shape-corner-medium);
+    padding: var(--md-sys-spacing-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--md-sys-spacing-2);
+}
+
+.card--outlined {
+    background: var(--md-sys-color-surface);
+    border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.card__label {
+    font: var(--md-sys-typescale-label-medium);
+    color: var(--md-sys-color-on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.card__value {
+    font: var(--md-sys-typescale-headline-small);
+}
+
+.card__hint {
+    font: var(--md-sys-typescale-body-small);
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: var(--md-sys-spacing-3);
+}
+
+/* ---------------------------------------------------------------- chips */
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--md-sys-spacing-1);
+    height: 24px;
+    padding: 0 var(--md-sys-spacing-2);
+    border-radius: var(--md-sys-shape-corner-small);
+    font: var(--md-sys-typescale-label-medium);
+    background: var(--md-sys-color-surface-container-highest);
+    color: var(--md-sys-color-on-surface-variant);
+    white-space: nowrap;
+}
+
+.chip--ok {
+    background: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container);
+}
+
+.chip--warn {
+    background: var(--md-sys-color-tertiary-container);
+    color: var(--md-sys-color-on-tertiary-container);
+}
+
+.chip--bad {
+    background: var(--md-sys-color-error-container);
+    color: var(--md-sys-color-on-error-container);
+}
+
+/* ---------------------------------------------------------------- table */
+
+.table-wrap {
+    overflow-x: auto;
+    border-radius: var(--md-sys-shape-corner-medium);
+    border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font: var(--md-sys-typescale-body-medium);
+}
+
+thead th {
+    text-align: left;
+    font: var(--md-sys-typescale-label-large);
+    color: var(--md-sys-color-on-surface-variant);
+    padding: var(--md-sys-spacing-3) var(--md-sys-spacing-4);
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
+    white-space: nowrap;
+}
+
+tbody td {
+    padding: var(--md-sys-spacing-3) var(--md-sys-spacing-4);
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
+    vertical-align: middle;
+}
+
+tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+tbody tr:hover {
+    background: var(--md-sys-color-surface-container-low);
+}
+
+.row-actions {
+    display: flex;
+    gap: var(--md-sys-spacing-1);
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.empty {
+    padding: var(--md-sys-spacing-6);
+    text-align: center;
+    color: var(--md-sys-color-on-surface-variant);
+    font: var(--md-sys-typescale-body-medium);
+}
+
+/* ---------------------------------------------------------------- text field */
+
+.field {
+    position: relative;
+    display: block;
+}
+
+.field input,
+.field select {
+    width: 100%;
+    min-height: 56px;
+    padding: var(--md-sys-spacing-5) var(--md-sys-spacing-4) var(--md-sys-spacing-2);
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: var(--md-sys-shape-corner-extra-small);
+    background: transparent;
+    color: var(--md-sys-color-on-surface);
+    font: var(--md-sys-typescale-body-large);
+    outline: none;
+    transition: border-color var(--md-sys-motion-duration-short) var(--md-sys-motion-standard);
+}
+
+.field input:focus,
+.field select:focus {
+    border-color: var(--md-sys-color-primary);
+    border-width: 2px;
+    padding-bottom: calc(var(--md-sys-spacing-2) - 1px);
+}
+
+.field__label {
+    position: absolute;
+    left: var(--md-sys-spacing-4);
+    top: 50%;
+    transform: translateY(-50%);
+    font: var(--md-sys-typescale-body-large);
+    color: var(--md-sys-color-on-surface-variant);
+    pointer-events: none;
+    transition: all var(--md-sys-motion-duration-short) var(--md-sys-motion-standard);
+}
+
+.field input:focus + .field__label,
+.field input:not(:placeholder-shown) + .field__label,
+.field select:focus + .field__label,
+.field select:not([data-empty]) + .field__label {
+    top: var(--md-sys-spacing-2);
+    transform: none;
+    font: var(--md-sys-typescale-body-small);
+    color: var(--md-sys-color-primary);
+}
+
+.field__hint {
+    display: block;
+    padding: var(--md-sys-spacing-1) var(--md-sys-spacing-4) 0;
+    font: var(--md-sys-typescale-body-small);
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+/* ---------------------------------------------------------------- dialog */
+
+.scrim {
+    position: fixed;
+    inset: 0;
+    background: rgb(0 0 0 / 0.32);
+    display: grid;
+    place-items: center;
+    padding: var(--md-sys-spacing-5);
+    z-index: 10;
+    animation: fade var(--md-sys-motion-duration-short) var(--md-sys-motion-standard);
+}
+
+.dialog {
+    background: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-on-surface);
+    border-radius: var(--md-sys-shape-corner-extra-large);
+    padding: var(--md-sys-spacing-5);
+    width: min(520px, 100%);
+    max-height: 85vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--md-sys-spacing-4);
+    animation: rise var(--md-sys-motion-duration-medium) var(--md-sys-motion-emphasized-decelerate);
+}
+
+.dialog__title {
+    font: var(--md-sys-typescale-headline-small);
+}
+
+.dialog__body {
+    font: var(--md-sys-typescale-body-medium);
+    color: var(--md-sys-color-on-surface-variant);
+    display: flex;
+    flex-direction: column;
+    gap: var(--md-sys-spacing-4);
+}
+
+.dialog__actions {
+    display: flex;
+    gap: var(--md-sys-spacing-2);
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+/* The one-time key reveal. Selectable, monospace, and impossible to miss. */
+.secret {
+    background: var(--md-sys-color-surface-container-lowest);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--md-sys-shape-corner-small);
+    padding: var(--md-sys-spacing-3);
+    font-family: var(--md-sys-typescale-mono);
+    font-size: 0.8125rem;
+    word-break: break-all;
+    user-select: all;
+}
+
+/* ---------------------------------------------------------------- snackbar */
+
+.snackbar {
+    position: fixed;
+    left: 50%;
+    bottom: var(--md-sys-spacing-5);
+    transform: translateX(-50%);
+    background: var(--md-sys-color-inverse-surface);
+    color: var(--md-sys-color-inverse-on-surface);
+    border-radius: var(--md-sys-shape-corner-extra-small);
+    padding: var(--md-sys-spacing-3) var(--md-sys-spacing-4);
+    font: var(--md-sys-typescale-body-medium);
+    max-width: min(560px, 90vw);
+    z-index: 20;
+    animation: rise var(--md-sys-motion-duration-medium) var(--md-sys-motion-emphasized-decelerate);
+}
+
+/* ---------------------------------------------------------------- login */
+
+.login {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: var(--md-sys-spacing-5);
+    background: var(--md-sys-color-surface-container-low);
+}
+
+.login__card {
+    background: var(--md-sys-color-surface);
+    border-radius: var(--md-sys-shape-corner-extra-large);
+    padding: var(--md-sys-spacing-6);
+    width: min(400px, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: var(--md-sys-spacing-4);
+    border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.login__title {
+    font: var(--md-sys-typescale-headline-small);
+}
+
+.login__error {
+    font: var(--md-sys-typescale-body-small);
+    color: var(--md-sys-color-error);
+    min-height: 1rem;
+}
+
+/* ---------------------------------------------------------------- misc */
+
+.section-head {
+    display: flex;
+    align-items: center;
+    gap: var(--md-sys-spacing-3);
+    flex-wrap: wrap;
+}
+
+.section-head__title {
+    font: var(--md-sys-typescale-title-medium);
+    flex: 1;
+}
+
+.bar {
+    display: flex;
+    height: 12px;
+    border-radius: var(--md-sys-shape-corner-full);
+    overflow: hidden;
+    background: var(--md-sys-color-surface-container-highest);
+}
+
+.bar__seg {
+    height: 100%;
+}
+
+.bar__seg--cheat {
+    background: var(--md-sys-color-error);
+}
+
+.bar__seg--uncertain {
+    background: var(--md-sys-color-tertiary);
+}
+
+.bar__seg--legit {
+    background: var(--md-sys-color-secondary);
+}
+
+.legend {
+    display: flex;
+    gap: var(--md-sys-spacing-4);
+    flex-wrap: wrap;
+    font: var(--md-sys-typescale-body-small);
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+.legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--md-sys-spacing-1);
+}
+
+.dot {
+    width: 10px;
+    height: 10px;
+    border-radius: var(--md-sys-shape-corner-full);
+    display: inline-block;
+}
+
+@keyframes fade {
+    from { opacity: 0; }
+}
+
+@keyframes rise {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+}
+
+/* ---------------------------------------------------------------- compact windows */
+
+@media (max-width: 839px) {
+    .app {
+        grid-template-columns: 1fr;
+    }
+
+    /* Navigation bar replaces the rail: same destinations, bottom-anchored. */
+    .rail {
+        order: 2;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: auto;
+        flex-direction: row;
+        justify-content: space-around;
+        border-right: 0;
+        border-top: 1px solid var(--md-sys-color-outline-variant);
+        background: var(--md-sys-color-surface-container);
+        padding: var(--md-sys-spacing-1) 0;
+        z-index: 5;
+    }
+
+    .rail__brand {
+        display: none;
+    }
+
+    .main {
+        padding-bottom: 72px;
+    }
+
+    .content {
+        padding: 0 var(--md-sys-spacing-4) var(--md-sys-spacing-6);
+    }
+
+    .top-bar {
+        padding: 0 var(--md-sys-spacing-4);
+    }
+}

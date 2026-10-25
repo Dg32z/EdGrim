@@ -59,13 +59,15 @@ class PeriodicOps:
     def __init__(
         self,
         cycle: OpsCycle,
-        tenants: list[str],
+        tenants: "list[str] | Callable[[], list[str]]",
         interval_seconds: float,
         metrics: Metrics | None = None,
     ) -> None:
         if interval_seconds <= 0:
             raise ValueError("interval_seconds must be positive")
         self._cycle = cycle
+        # A callable rather than a list: tenants now live in a table the console edits, and a snapshot
+        # taken at startup would keep retraining on a tenant that has since been revoked.
         self._tenants = tenants
         self._interval = interval_seconds
         self._metrics = metrics if metrics is not None else cycle.metrics
@@ -75,7 +77,7 @@ class PeriodicOps:
     def run_once(self) -> None:
         """One tick, with its failures contained."""
         try:
-            outcome = self._cycle.run_once(self._tenants)
+            outcome = self._cycle.run_once(self._current_tenants())
             if outcome.published is not None:
                 logger.info("published model %s from dataset %s",
                             outcome.published.model_id, outcome.published.dataset_id)
@@ -85,6 +87,9 @@ class PeriodicOps:
         except Exception:
             self._metrics.record_error()
             logger.exception("retrain cycle failed; will retry next tick")
+
+    def _current_tenants(self) -> list[str]:
+        return self._tenants() if callable(self._tenants) else list(self._tenants)
 
     def start(self) -> None:
         if self._thread is not None:
