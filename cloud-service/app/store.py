@@ -127,6 +127,25 @@ class SampleStore:
         ).fetchall()
         return [str(row[0]) for row in rows]
 
+    def session_ids(self, tenant_id: str) -> list[str]:
+        """Every recording session this tenant has uploaded, oldest first."""
+        rows = self._connection.execute(
+            "SELECT session_id FROM recording_sessions WHERE tenant_id = ? ORDER BY created_at, session_id",
+            (tenant_id,),
+        ).fetchall()
+        return [str(row[0]) for row in rows]
+
+    def samples_of_session(
+        self, tenant_id: str, session_id: str
+    ) -> list[tuple[str, str, list[float]]]:
+        """The samples of one session as ``(sample_id, player_hash, features)``."""
+        rows = self._connection.execute(
+            "SELECT sample_id, player_hash, features FROM samples"
+            " WHERE tenant_id = ? AND session_id = ? ORDER BY sample_id",
+            (tenant_id, session_id),
+        ).fetchall()
+        return [(str(row[0]), str(row[1]), json.loads(row[2])) for row in rows]
+
     def delete_player(self, tenant_id: str, player_hash: str) -> int:
         """Delete every sample belonging to one player. Returns how many rows went."""
         with self._connection:
