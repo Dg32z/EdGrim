@@ -13,8 +13,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app ./app
 COPY run.py ./
 
-# The dataset is the only state worth keeping, so it lives on a volume rather than in the image.
-ENV WATCHNEKO_DATABASE_PATH=/data/watchneko.db
+# Everything worth keeping lives on one volume: the generated config.yaml and the SQLite database
+# beside it. Nothing is configured by environment variable.
 VOLUME ["/data"]
 
 EXPOSE 8000
@@ -22,4 +22,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/metrics', timeout=2)"
 
-CMD ["python", "run.py"]
+CMD ["python", "run.py", "--config", "/data/config.yaml"]

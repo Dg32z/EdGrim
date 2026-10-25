@@ -84,6 +84,7 @@ def build_service(settings: Settings, trainer_name: str | None = None) -> Servic
             username=settings.admin_username,
             password=settings.admin_password,
             secret=settings.admin_secret or None,
+            session_ttl_seconds=settings.session_hours * 3600,
         )
         admin_router = create_admin_router(
             auth=admin_auth,
@@ -108,7 +109,6 @@ def build_service(settings: Settings, trainer_name: str | None = None) -> Servic
             samples_per_minute=settings.quota_per_minute, limit_resolver=limit_for
         ),
         metrics=metrics,
-        tenants=settings.tenants or None,
         tenant_store=tenants,
         admin_router=admin_router,
         console_router=console_router,

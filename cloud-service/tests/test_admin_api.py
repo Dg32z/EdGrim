@@ -14,7 +14,6 @@ PASSWORD = "correct horse"
 def service():
     return build_service(
         Settings(
-            tenants=[],
             database_path=":memory:",
             admin_username="root",
             admin_password=PASSWORD,

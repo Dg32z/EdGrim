@@ -15,8 +15,7 @@ def client() -> TestClient:
     return TestClient(
         build_service(
             Settings(
-                tenants=[],
-                database_path=":memory:",
+                    database_path=":memory:",
                 admin_username="root",
                 admin_password=PASSWORD,
                 admin_secret="s",

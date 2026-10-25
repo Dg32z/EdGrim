@@ -25,71 +25,56 @@ docker compose up -d
 
 ## 配置
 
-全部走环境变量，每一项都有默认值。
+**没有环境变量。** 服务读取一个 YAML 文件，**首次启动时自动生成**，之后不再覆盖——改完重启生效。
 
-| 变量 | 默认 | 说明 |
-| --- | --- | --- |
-| `WATCHNEKO_TENANTS` | `[]` | 租户 JSON 数组，见下 |
-| `WATCHNEKO_QUOTA_PER_MINUTE` | `6000` | 每租户每分钟可用的样本数 |
-| `WATCHNEKO_RETENTION_DAYS` | `90` | 样本保留期；由重训周期顺带清理 |
-| `WATCHNEKO_RETRAIN_INTERVAL_SECONDS` | `3600` | 重训周期 |
-| `WATCHNEKO_DATABASE_PATH` | `watchneko.db` | SQLite 路径；容器内是 `/data/watchneko.db` |
-
-```json
-[{"tenant_id": "t-survival", "api_key": "…", "servers": ["survival-1", "survival-2"]}]
+```bash
+.venv/bin/python run.py                      # 默认读 cloud-service/config.yaml
+.venv/bin/python run.py --config /etc/wn.yaml
 ```
 
-**`WATCHNEKO_TENANTS` 为空等于没有认证**：每个调用者都被当作同一个本地租户。这在 localhost 上没问题，
-一旦端口对外可达就是错的——`run.py` 会在启动时为此打一条 warning。
+首次启动会打印：
 
-## 管理控制台
+```
+WARNING 已生成配置文件 .../cloud-service/config.yaml
+WARNING 管理员账号 admin，密码 7gLR7JAJZC0D2rSOfFOzEJam
+WARNING 请修改密码后重启；该密码只在这里和配置文件里出现。
+```
 
-启动后访问 `http://<host>:8000/admin/`。界面用 Material Design 3 的 token 层手写（Web 端的 MD3
-Expressive 组件集并不存在，Material Web 处于维护模式），无构建步骤。
+生成的文件长这样，每一项都带注释：
 
-**每个视图是一个独立文档，不是一个 SPA。**
+```yaml
+server:
+  host: 0.0.0.0
+  port: 8000
 
-| URL | 模板 | 页面脚本 |
-| --- | --- | --- |
-| `/admin/login` | `templates/login.html` | `page-login.js` |
-| `/admin/dashboard` | `templates/dashboard.html` | `page-dashboard.js` |
-| `/admin/tenants` | `templates/tenants.html` | `page-tenants.js` |
-| `/admin/datasets` | `templates/datasets.html` | `page-datasets.js` |
-| `/admin/models` | `templates/models.html` | `page-models.js` |
+admin:
+  username: admin
+  password: "首次生成时随机产生"      # 请改成你自己的
+  secret: "会话签名密钥"              # 改动会让所有登录会话失效
+  session_hours: 8
 
-外壳（导航栏、顶栏）只在 `templates/base.html` 里写一次，四个视图 `{% extends %}` 它——把导航复制
-到五份文档里，就是五个会忘记改的地方。
+database:
+  path: watchneko.db                 # 相对路径以本文件所在目录为准
+  retention_days: 90
 
-**会话守卫在服务端**：未登录请求 `/admin/tenants` 拿到的是 303 重定向，页面标记根本不会发到浏览器。
-放在前端做守卫的话，不该拿到的人照样能拿到 HTML。
+quota:
+  samples_per_minute: 6000           # 新租户的默认配额
 
-共用逻辑在 `static/console.js`（API 客户端、对话框、snackbar、DOM 辅助），每个页面只 import 它并渲染
-自己的内容——它不认识「租户」是什么，那是页面脚本的事。
+training:
+  trainer: logistic                  # logistic | lightgbm
+  interval_seconds: 3600             # 设为 0 关闭自动重训
+```
 
-**两种凭据是分开的**，这是刻意的：
+删掉任意一项会退回默认值；`port: 0` 这类非法值会在启动时报错并指出是哪一项。
 
-| 凭据 | 谁用 | 能做什么 |
-| --- | --- | --- |
-| 租户 API key | 插件 | 上传样本、请求裁决 |
-| 管理员登录 | 人 | 改租户、轮换密钥、回滚模型 |
+**`config.yaml` 与数据库都不进版本库**（已在 `.gitignore` 里）——前者含明文密码。
 
-插件手里的 key 不能开控制台——否则一个被攻破的服务器就能吊销所有租户。
+Docker 下整份配置和数据都在一个卷里：
 
-管理员凭据走环境变量：
-
-| 变量 | 说明 |
-| --- | --- |
-| `WATCHNEKO_ADMIN_USERNAME` | 默认 `admin` |
-| `WATCHNEKO_ADMIN_PASSWORD` | **不设则整个 `/admin` 不挂载** |
-| `WATCHNEKO_ADMIN_SECRET` | 会话签名密钥；不设则每次重启生成随机值，所有会话失效 |
-
-### 密钥的生命周期
-
-租户与密钥存在 SQLite 的 `tenants` 表里，密钥**只存 SHA-256 摘要**，明文仅在创建或轮换时显示一次。
-所以界面上有「复制」按钮，关掉对话框就再也拿不到——这是设计，不是缺陷。
-
-轮换会**立即**让旧 key 失效，没有重叠期。正在用旧 key 的服务器会立刻开始 401，这一点在轮换确认框里
-写明了。
+```bash
+docker compose up -d          # 首次启动在 /data/config.yaml 生成配置
+docker compose logs cloud     # 这里能看到生成的管理员密码
+```
 
 ## 模块
 
@@ -152,7 +137,7 @@ codesign --force --sign - "$LGB"          # install_name_tool 会破坏签名
 ## 跑测试
 
 ```bash
-.venv/bin/python -m pytest        # 187 个用例
+.venv/bin/python -m pytest        # 197 个用例
 ```
 
 ## 有意保留的限制
