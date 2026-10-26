@@ -183,6 +183,8 @@ public class WatchNekoExternalAPI implements GrimAbstractAPI, ConfigReloadObserv
         // Rebuild the cloud gateway before players reload their checks, so a check either sees a fully
         // configured gateway or none at all
         CloudGateway.reload(configManager);
+        // Recordings outlive a disconnect; this keeps their paused state in step with the connection.
+        cc.watchneko.checks.impl.analysis.RecordingLifecycle.install();
         // Don't reload players if the plugin hasn't started yet
         if (!started) return;
         // Reload checks for all players

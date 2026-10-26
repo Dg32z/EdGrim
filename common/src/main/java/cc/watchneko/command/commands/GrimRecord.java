@@ -56,7 +56,9 @@ public class GrimRecord implements BuildableCommand {
                         .literal("record")
                         .literal("stop")
                         .permission(PERMISSION)
-                        .required("target", WatchNekoAPI.INSTANCE.getCommandAdapter().singlePlayerSelectorParser())
+                        // A name, not a player selector: the player may well have disconnected, and the
+                        // whole point of stop is that an interrupted recording can still be resolved.
+                        .required("target", StringParser.stringParser())
                         .required("action", StringParser.stringParser())
                         .handler(this::handleStop));
     }
@@ -107,35 +109,41 @@ public class GrimRecord implements BuildableCommand {
         final Sender sender = context.sender();
         final String action = String.valueOf(context.<String>get("action")).toLowerCase(Locale.ROOT);
 
-        // Keyed by the player being recorded, not by whoever ran the command: an admin recording someone
-        // else must still be able to end that session.
-        final PlatformPlayer target = resolveTarget(context, sender);
-        if (target == null) {
+        // Validate before touching the session. The session is removed as soon as it is found, so rejecting a
+        // mistyped action afterwards would have already destroyed the recording — minutes of an admin's work
+        // lost to a typo.
+        if (!action.equals("upload") && !action.equals("discard")) {
+            sender.sendMessage(Component.text(
+                    "Action must be 'upload' or 'discard'; nothing was changed.", NamedTextColor.RED));
             return;
         }
 
-        final Optional<RecordingSession> ended = RecordingSessions.stop(target.getUniqueId());
+        // Keyed by the player being recorded, not by whoever ran the command: an admin recording someone
+        // else must still be able to end that session. Matched by name rather than by selector so this works
+        // after the player has disconnected — otherwise a recording whose player never returns could never
+        // be ended, and its samples would sit in memory until the plugin restarts.
+        final String name = String.valueOf(context.<String>get("target")).trim();
+
+        final Optional<RecordingSession> found = RecordingSessions.findByName(name);
+        if (found.isEmpty()) {
+            sender.sendMessage(Component.text(
+                    name + " is not being recorded.", NamedTextColor.RED));
+            return;
+        }
+
+        final RecordingSession session = found.get();
+        final Optional<RecordingSession> ended = RecordingSessions.stop(session.player());
         if (ended.isEmpty()) {
             sender.sendMessage(Component.text(
-                    target.getName() + " is not being recorded.", NamedTextColor.RED));
+                    name + " is not being recorded.", NamedTextColor.RED));
             return;
         }
-
-        final RecordingSession session = ended.get();
 
         if (action.equals("discard")) {
             sender.sendMessage(Component.text(
-                    "Discarded " + session.size() + " samples from " + session.playerName() + ".",
+                    "Discarded " + session.size() + " samples from " + session.playerName()
+                            + describeInterruptions(session) + ".",
                     NamedTextColor.GRAY));
-            return;
-        }
-
-        if (!action.equals("upload")) {
-            // The session has already been removed, so re-registering it would lose the samples.
-            sender.sendMessage(Component.text(
-                    "Action must be 'upload' or 'discard'. The session for " + session.playerName()
-                            + " has been ended and its " + session.size() + " samples dropped.",
-                    NamedTextColor.RED));
             return;
         }
 
@@ -148,7 +156,8 @@ public class GrimRecord implements BuildableCommand {
         }
 
         sender.sendMessage(Component.text(
-                "Uploading " + session.size() + " samples from " + session.playerName() + "...",
+                "Uploading " + session.size() + " samples from " + session.playerName()
+                        + describeInterruptions(session) + "...",
                 NamedTextColor.GRAY));
 
         gateway.uploadAsync(session.sessionId(), session.label(), session.samples())
@@ -161,6 +170,20 @@ public class GrimRecord implements BuildableCommand {
                     }
                     sender.sendMessage(describe(result, session));
                 });
+    }
+
+    /**
+     * Says whether the recording was interrupted, so an admin can decide to discard it before uploading.
+     *
+     * <p>A recording that spans a disconnect is still valid training data — each sample stands on its own —
+     * but it is not the continuous run the admin thought they were making, and they should know.
+     */
+    private static String describeInterruptions(final RecordingSession session) {
+        if (session.interruptions() == 0) {
+            return "";
+        }
+        return " (interrupted " + session.interruptions() + " time"
+                + (session.interruptions() == 1 ? "" : "s") + " by disconnects)";
     }
 
     private static Component describe(final SampleUploadResult result, final RecordingSession session) {

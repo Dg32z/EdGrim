@@ -44,6 +44,38 @@ public final class RecordingSessions {
         return Optional.ofNullable(ACTIVE.get(player));
     }
 
+    /** Pauses a player's session because they left. No-op when they were not being recorded. */
+    public static void pause(final UUID player) {
+        active(player).ifPresent(RecordingSession::pause);
+    }
+
+    /** Resumes a player's session because they came back. No-op when they were not being recorded. */
+    public static void resume(final UUID player) {
+        active(player).ifPresent(RecordingSession::resume);
+    }
+
+    /**
+     * Finds a session by the player's name.
+     *
+     * <p>This exists so {@code record stop} works when the player is offline: the usual command argument is a
+     * player selector, which cannot resolve someone who is not connected, and a session whose player never
+     * comes back would otherwise be impossible to end.
+     */
+    public static Optional<RecordingSession> findByName(final String name) {
+        if (name == null || name.isBlank()) {
+            return Optional.empty();
+        }
+        final String wanted = name.trim();
+        return ACTIVE.values().stream()
+                .filter(session -> session.playerName().equalsIgnoreCase(wanted))
+                .findFirst();
+    }
+
+    /** Every session currently in progress, paused ones included. */
+    public static java.util.List<RecordingSession> all() {
+        return java.util.List.copyOf(ACTIVE.values());
+    }
+
     public static boolean isRecording(final UUID player) {
         return ACTIVE.containsKey(player);
     }

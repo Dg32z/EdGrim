@@ -257,6 +257,8 @@ Milliseconds per prediction (avg. 20k): 0.019
 
 录制需要云端已连通。没连上时命令会直接拒绝：没有租户 salt 就没法哈希玩家 ID，也没有地方上传。
 
+**玩家中途退服不会中断录制。** 退服时自动暂停，回来时自动继续，不需要重新 `record start`。中途掉线过几次会在 `stop` 时告诉你。
+
 ### `/watchneko record start`
 
 开始录制某个玩家的样本，并**先**给出标注。
@@ -280,18 +282,28 @@ Milliseconds per prediction (avg. 20k): 0.019
 结束录制，并决定这份数据要不要。
 
 ```
-/watchneko record stop <玩家> <upload|discard>
+/watchneko record stop <玩家名> <upload|discard>
 ```
 
 - 权限：`watchneko.record`
 - `upload` — 作为一个带标注的批次上传到云端数据集
 - `discard` — 丢弃
 
-录坏了直接 `discard` 即可，不会污染数据集。
-
 ```text
 /watchneko record stop Steve upload
 ```
+
+**玩家不在线也能 stop。** 参数是**名字**而不是玩家选择器，所以录到一半人走了、再也不回来，你照样能结束这次录制并选择上传或丢弃。
+
+**动作写错不会丢数据。** `upload` / `discard` 拼错时命令会直接拒绝，录制原样保留，重打一次即可。
+
+如果中途掉过线，`stop` 会提示中断次数：
+
+```text
+Discarded 412 samples from Steve (interrupted 2 times by disconnects).
+```
+
+中断过的录制仍然可用——每个样本是独立的——但你知道它不是一整段连续的记录，可以据此决定要不要。
 
 **录制多少合适**：一次录 30 秒到 2 分钟的高质量片段，比录 10 分钟里面只有 5 秒在作弊有用得多。云端训练需要 `cheat` 和 `legit` **两类都有**，只有一类的话数据集不可训练，控制台会显示「缺一类」。
 

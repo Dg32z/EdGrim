@@ -6,6 +6,7 @@ import cc.watchneko.cloud.Label;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * One admin's recording of one player, from the moment it starts to the moment it is uploaded or thrown away.
@@ -25,6 +26,8 @@ public final class RecordingSession {
     private final String playerName;
     private final Label label;
     private final List<FeatureSample> samples = new ArrayList<>();
+    private final AtomicInteger interruptions = new AtomicInteger();
+    private volatile boolean paused;
 
     public RecordingSession(
             final String sessionId, final UUID player, final String playerName, final Label label) {
@@ -34,8 +37,46 @@ public final class RecordingSession {
         this.label = label;
     }
 
+    /**
+     * Adds a sample, unless the session is paused.
+     *
+     * <p>A paused session is one whose player has left the server. Nothing would arrive while they are gone
+     * anyway, so the guard is defensive rather than load-bearing — but it makes the invariant explicit: a
+     * paused recording never grows.
+     */
     public void add(final FeatureSample sample) {
+        if (paused) {
+            return;
+        }
         samples.add(sample);
+    }
+
+    /**
+     * Suspends the recording because the player left. The session survives, and {@link #resume()} picks it
+     * back up — an admin should not have to re-run {@code record start} because someone disconnected.
+     *
+     * <p>Counts interruptions, so {@code record stop} can tell the admin their recording has a hole in it.
+     */
+    public void pause() {
+        if (paused) {
+            return;
+        }
+        paused = true;
+        interruptions.incrementAndGet();
+    }
+
+    /** Resumes a paused recording, e.g. when the player reconnects. */
+    public void resume() {
+        paused = false;
+    }
+
+    public boolean isPaused() {
+        return paused;
+    }
+
+    /** How many times the player left mid-recording. */
+    public int interruptions() {
+        return interruptions.get();
     }
 
     public String sessionId() {
