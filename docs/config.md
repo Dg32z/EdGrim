@@ -653,7 +653,7 @@ AnalysisA:
         timeout-ms: 2000
     batch-size: 8
     analysis-window-size: 10
-    min-cheat-votes: 6
+    min-cheat-votes: 8
     local-gate-min-energy: 1.25
     quota-cooldown-ms: 30000
     debug-log: false
@@ -669,7 +669,7 @@ AnalysisA:
 | `cloud.timeout-ms` | `2000` | 单次请求超时（毫秒） |
 | `batch-size` | `8` | 攒够多少样本发一次；同一玩家同时最多一个请求在途 |
 | `analysis-window-size` | `10` | 投票窗口大小 |
-| `min-cheat-votes` | `6` | 窗口内至少多少个 cheat-like 裁决才告警 |
+| `min-cheat-votes` | `8` | 窗口内至少多少个 cheat-like 裁决才告警 |
 | `local-gate-min-energy` | `1.25` | 超出配额时只发送能量不低于此值的窗口；静止窗口不携带瞄准信号 |
 | `quota-cooldown-ms` | `30000` | 收到 429 后只发高能量样本的持续时间 |
 | `debug-log` | `false` | 打印丢样与云端失败信息 |

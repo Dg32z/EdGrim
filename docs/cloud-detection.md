@@ -114,7 +114,7 @@ AnalysisA:
         timeout-ms: 2000
     batch-size: 8
     analysis-window-size: 10
-    min-cheat-votes: 6
+    min-cheat-votes: 8
     local-gate-min-energy: 1.25
     quota-cooldown-ms: 30000
     debug-log: true                                  # 调试期开着，稳定后关掉
@@ -210,10 +210,10 @@ AnalysisA:
 
 ```yaml
 analysis-window-size: 10    # 累计多少个样本裁决后开始判断
-min-cheat-votes: 6          # 其中至少多少个 cheat-like 才告警
+min-cheat-votes: 8          # 其中至少多少个 cheat-like 才告警
 ```
 
-默认是 10 个裁决里 6 个判为作弊。**误报多就调高** `min-cheat-votes`（比如 7 或 8），**漏报多就调低**。
+默认是 10 个裁决里 8 个判为作弊。**误报多就调高** `min-cheat-votes`（最高到 10），**漏报多就调低**（比如 6 或 7）。
 
 ### 惩罚（`punishments.yml`）
 

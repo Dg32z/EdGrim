@@ -141,7 +141,7 @@ public class ConfigManagerFileImpl implements ConfigManager, BasicReloadable {
                 "        timeout-ms: 2000\n" +
                 "    batch-size: 8\n" +
                 "    analysis-window-size: 10\n" +
-                "    min-cheat-votes: 6\n" +
+                "    min-cheat-votes: 8\n" +
                 "    local-gate-min-energy: 1.25\n" +
                 "    quota-cooldown-ms: 30000\n" +
                 "    debug-log: false";

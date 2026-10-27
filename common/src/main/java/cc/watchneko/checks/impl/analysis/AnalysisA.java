@@ -52,7 +52,7 @@ public final class AnalysisA extends Check implements RotationCheck, AttackSigna
     private final List<FeatureSample> batch = new ArrayList<>();
     private final ConcurrentLinkedQueue<VerdictLabel> incomingVerdicts = new ConcurrentLinkedQueue<>();
 
-    private VerdictVotes votes = new VerdictVotes(10, 6);
+    private VerdictVotes votes = new VerdictVotes(10, 8);
     private boolean inFlight;
     private boolean debugLog;
     private boolean quotaGated;
@@ -75,7 +75,7 @@ public final class AnalysisA extends Check implements RotationCheck, AttackSigna
         quotaCooldownMs = Math.max(1L, config.getIntElse("AnalysisA.quota-cooldown-ms", 30_000));
 
         final int windowSize = Math.max(1, config.getIntElse("AnalysisA.analysis-window-size", 10));
-        final int minCheatVotes = Math.max(1, config.getIntElse("AnalysisA.min-cheat-votes", 6));
+        final int minCheatVotes = Math.max(1, config.getIntElse("AnalysisA.min-cheat-votes", 8));
         votes = new VerdictVotes(windowSize, minCheatVotes);
 
         if (window != null) {
