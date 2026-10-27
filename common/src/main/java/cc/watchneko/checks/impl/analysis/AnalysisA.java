@@ -72,10 +72,18 @@ public final class AnalysisA extends Check implements RotationCheck, AttackSigna
         final int minCheatVotes = Math.max(1, config.getIntElse("AnalysisA.min-cheat-votes", 6));
         votes = new VerdictVotes(windowSize, minCheatVotes);
 
-        window.clear();
-        pendingAnchors.clear();
-        batch.clear();
-        incomingVerdicts.clear();
+        if (window != null) {
+            window.clear();
+        }
+        if (pendingAnchors != null) {
+            pendingAnchors.clear();
+        }
+        if (batch != null) {
+            batch.clear();
+        }
+        if (incomingVerdicts != null) {
+            incomingVerdicts.clear();
+        }
     }
 
     @Override
