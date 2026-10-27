@@ -20,22 +20,31 @@ function verdictBar(verdicts) {
             text,
         );
 
+    // A segment too small to label still needs its number reachable; the tooltip is that channel, and it
+    // also gives the bar a hover target per mark rather than one target for the whole strip.
+    const segment = (kind, count) =>
+        h('div', {
+            class: `bar__seg bar__seg--${kind}`,
+            style: `width:${pct(count)}`,
+            title: `${count} 条（${((count / total) * 100).toFixed(1)}%）`,
+        });
+
     return h(
         'div',
         { class: 'stack' },
         h(
             'div',
             { class: 'bar', role: 'img', 'aria-label': '裁决分布' },
-            h('div', { class: 'bar__seg bar__seg--cheat', style: `width:${pct(verdicts.cheat_like)}` }),
-            h('div', { class: 'bar__seg bar__seg--uncertain', style: `width:${pct(verdicts.uncertain)}` }),
-            h('div', { class: 'bar__seg bar__seg--legit', style: `width:${pct(verdicts.legit_like)}` }),
+            segment('cheat', verdicts.cheat_like),
+            segment('uncertain', verdicts.uncertain),
+            segment('legit', verdicts.legit_like),
         ),
         h(
             'div',
             { class: 'legend' },
-            legend('--md-sys-color-error', `作弊样 ${verdicts.cheat_like}`),
-            legend('--md-sys-color-tertiary', `不确定 ${verdicts.uncertain}`),
-            legend('--md-sys-color-secondary', `正常样 ${verdicts.legit_like}`),
+            legend('--md-sys-color-verdict-cheat', `作弊样 ${verdicts.cheat_like}`),
+            legend('--md-sys-color-verdict-uncertain', `不确定 ${verdicts.uncertain}`),
+            legend('--md-sys-color-verdict-legit', `正常样 ${verdicts.legit_like}`),
         ),
     );
 }

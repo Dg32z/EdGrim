@@ -46,6 +46,16 @@
     --md-sys-color-inverse-on-surface: #f5eff7;
     --md-sys-color-inverse-primary: #d0bcff;
 
+    /* Verdict distribution — a diverging scale, not three categorical hues.
+       cheat and legit are the two poles of one judgement; uncertain is the model declining to call it,
+       so it takes a neutral midpoint rather than a third colour. Reusing error/secondary/tertiary here
+       was the bug: M3's baseline secondary and tertiary are near-identical (ΔE 5.2 normal vision,
+       below the 15 floor), so the bar read as two shades of one thing. Validated with the palette
+       checker: poles separate at ΔE 23.0 normal / 20.8 CVD against #fef7ff. */
+    --md-sys-color-verdict-cheat: #b3261e;
+    --md-sys-color-verdict-uncertain: #a29ca6;
+    --md-sys-color-verdict-legit: #6750a4;
+
     /* Type scale — Roboto Flex is the correct MD3 default, not a fallback to avoid. */
     --md-sys-typescale-font: "Roboto Flex", "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif;
     --md-sys-typescale-mono: "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -128,6 +138,13 @@
         --md-sys-color-inverse-surface: #e6e0e9;
         --md-sys-color-inverse-on-surface: #322f35;
         --md-sys-color-inverse-primary: #6750a4;
+
+        /* Dark steps of the same diverging scale. The baseline dark tokens are far too pale to serve as
+           marks (L 0.83, outside the 0.48-0.67 band), so these are stepped for the dark surface and
+           validated as a set: poles at ΔE 26.0 normal / 23.5 CVD against #141218, midpoint at 17.7. */
+        --md-sys-color-verdict-cheat: #e34948;
+        --md-sys-color-verdict-uncertain: #8f8b93;
+        --md-sys-color-verdict-legit: #7360d4;
 
         color-scheme: dark;
     }
@@ -640,18 +657,25 @@ tbody tr:hover {
 
 .bar__seg {
     height: 100%;
+    /* 2px surface gap between stacked fills, so adjacent segments never touch and the boundary stays
+       legible even for a colour-vision-deficient reader who cannot separate the two hues. */
+    box-shadow: inset -2px 0 0 var(--md-sys-color-surface-container-highest);
+}
+
+.bar__seg:last-child {
+    box-shadow: none;
 }
 
 .bar__seg--cheat {
-    background: var(--md-sys-color-error);
+    background: var(--md-sys-color-verdict-cheat);
 }
 
 .bar__seg--uncertain {
-    background: var(--md-sys-color-tertiary);
+    background: var(--md-sys-color-verdict-uncertain);
 }
 
 .bar__seg--legit {
-    background: var(--md-sys-color-secondary);
+    background: var(--md-sys-color-verdict-legit);
 }
 
 .legend {
