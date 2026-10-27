@@ -1,10 +1,10 @@
 package cc.watchneko.command.commands;
 
 import cc.watchneko.WatchNekoAPI;
-import cc.watchneko.checks.impl.analysis.CloudGateway;
-import cc.watchneko.checks.impl.analysis.RecordingSession;
-import cc.watchneko.checks.impl.analysis.RecordingSessions;
+import cc.watchneko.cloud.CloudGateway;
 import cc.watchneko.cloud.Label;
+import cc.watchneko.cloud.RecordingSession;
+import cc.watchneko.cloud.RecordingSessions;
 import cc.watchneko.cloud.SampleUploadResult;
 import cc.watchneko.command.BuildableCommand;
 import cc.watchneko.platform.api.command.PlayerSelector;

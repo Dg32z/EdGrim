@@ -1,8 +1,8 @@
 package cc.watchneko.checks.impl.aim;
 
+import cc.watchneko.analysis.aim.heuristic.*;
 import cc.watchneko.checks.Check;
 import cc.watchneko.checks.CheckData;
-import cc.watchneko.checks.impl.aim.heuristic.*;
 import cc.watchneko.checks.type.RotationCheck;
 import cc.watchneko.player.PlayerData;
 import cc.watchneko.utils.anticheat.update.RotationUpdate;

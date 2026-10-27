@@ -1,9 +1,9 @@
 package cc.watchneko.checks.impl.aim;
 
+import cc.watchneko.analysis.aim.trajectory.*;
 import cc.watchneko.checks.Check;
 import cc.watchneko.checks.CheckData;
 import cc.watchneko.checks.impl.aim.processor.AimProcessor;
-import cc.watchneko.checks.impl.aim.trajectory.*;
 import cc.watchneko.checks.type.PacketCheck;
 import cc.watchneko.player.PlayerData;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
