@@ -278,6 +278,7 @@ AnalysisA:
     # 云端旋转检测。插件只负责采样与特征提取，判定由云端给出。
     # 云端裁决只累加 VL——是否真的惩罚仍由本文件的 analysis-window-size 与 min-cheat-votes、
     # 以及 punishments 里的 Analysis 组决定。云端超时、报错或不可达时不会产生任何 VL。
+    # 首个模型发布之前推理不启用，但 /watchneko record 仍可录制：上传的样本正是训练这个模型用的。
     cloud:
         # 总开关。默认关闭：在你启用并配置好之前，不会向任何地方发送数据。
         enabled: false

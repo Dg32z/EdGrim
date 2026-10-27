@@ -33,8 +33,10 @@ import java.util.UUID;
  * record. The session is then either uploaded as one labelled batch or thrown away, so a bad recording
  * costs nothing and never reaches the dataset.
  *
- * <p>Recording only works once the cloud is reachable: without a gateway there is no tenant salt to hash
- * the player id with, and no endpoint to upload to.
+ * <p>Recording needs an authenticated, reachable cloud — for the tenant salt that hashes the player id and
+ * for somewhere to upload to. It does <em>not</em> need a published model: the first model is trained from
+ * exactly the samples a model-less server records. Requiring one here would make the first model
+ * impossible to produce.
  */
 public class GrimRecord implements BuildableCommand {
 
@@ -102,7 +104,18 @@ public class GrimRecord implements BuildableCommand {
                 .append(Component.text(" as ", NamedTextColor.GRAY))
                 .append(Component.text(label.get().name().toLowerCase(Locale.ROOT), NamedTextColor.YELLOW))
                 .append(Component.text(". Session " + sessionId, NamedTextColor.GRAY))
+                .append(cloudHasNoModel()
+                        ? Component.text(
+                                " (no model published yet; samples are being collected as training data)",
+                                NamedTextColor.GRAY)
+                        : Component.empty())
                 .build());
+    }
+
+    /** Whether the gateway in effect is the cold start: reachable, but nothing published to classify with. */
+    private static boolean cloudHasNoModel() {
+        final CloudGateway gateway = CloudGateway.current();
+        return gateway != null && !gateway.canInfer();
     }
 
     private void handleStop(final @NonNull CommandContext<Sender> context) {

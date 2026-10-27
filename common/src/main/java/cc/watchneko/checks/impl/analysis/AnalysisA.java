@@ -132,7 +132,7 @@ public final class AnalysisA extends Check implements RotationCheck, AttackSigna
             // Under quota pressure only the samples that actually moved get sent. A window with no
             // movement says nothing about aim, so dropping it loses no detection power - and unlike
             // dropping arbitrary samples, it does not bias what the cloud sees.
-            if (quotaGated && extracted.get().energy() < gateMinEnergy) {
+            if (gateway.canInfer() && quotaGated && extracted.get().energy() < gateMinEnergy) {
                 debug("dropped a still window while quota-gated (energy=" + extracted.get().energy() + ")");
                 continue;
             }
@@ -151,6 +151,13 @@ public final class AnalysisA extends Check implements RotationCheck, AttackSigna
             final Optional<RecordingSession> recording = RecordingSessions.active(player.uuid);
             if (recording.isPresent()) {
                 recording.get().add(sample);
+                continue;
+            }
+
+            // Nothing published to classify with yet. The sample would sit in the batch until it grew
+            // past the limit and was dropped anyway; not accumulating it keeps the memory flat while the
+            // server is recording its first dataset.
+            if (!gateway.canInfer()) {
                 continue;
             }
 

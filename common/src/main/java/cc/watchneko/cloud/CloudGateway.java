@@ -28,12 +28,19 @@ import java.util.concurrent.TimeUnit;
  * dereferenced before anything had loaded it and every packet threw.
  *
  * <p><b>{@link #current()} returning {@code null} is a normal state</b>, not an error. It covers every way
- * the cloud can be unusable: not enabled, not configured, unreachable, answering with an error, having no
- * published model yet, or publishing a model whose feature width this build cannot speak. A check that
- * sees {@code null} simply does nothing — no samples leave, no verdicts arrive, no violation is raised.
+ * the cloud can be unusable for either purpose: not enabled, not configured, unreachable, or answering
+ * with an authentication failure. A check that sees {@code null} simply does nothing — no samples leave,
+ * no verdicts arrive, no violation is raised.
+ *
+ * <p>A gateway is not the same thing as a usable model. Recording and uploading samples needs only an
+ * authenticated, reachable cloud, so a gateway exists during the cold start — before any model has been
+ * published. {@link #canInfer()} is what separates the two: it is false while there is no model, or while
+ * the published model's feature width does not match this build. Detection is off in that state, but
+ * {@code /watchneko record} works, which is how the first model gets trained at all.
  *
  * <p>When the cloud comes back, detection comes back on its own: {@link #recoverIfNeeded()} re-attempts on
- * a timer, so a server that started before the cloud did does not need a restart to begin detecting.
+ * a timer, including the upgrade from "reachable but no model" to "model published", so a server that
+ * started before the cloud did — or before the first model existed — does not need a restart.
  */
 public final class CloudGateway {
 
@@ -65,17 +72,40 @@ public final class CloudGateway {
         return current;
     }
 
+    /**
+     * Whether this gateway can classify samples.
+     *
+     * <p>False during the cold start — the cloud is reachable and authenticated, but no model has been
+     * published yet — and false when the published model expects a feature width this build does not
+     * send. Both are states in which recording still works: a server that cannot infer is exactly the
+     * server that needs to produce training data.
+     */
+    public boolean canInfer() {
+        return metadata != null;
+    }
+
     /** Rebuilds the gateway from config. Called from the async reload path, so blocking here is acceptable. */
     public static void reload(final ConfigManager config) {
         lastConfig = config;
         current = attemptFrom(config);
+        if (current != null && !current.canInfer()) {
+            // Said once per reload, not once per recovery tick: the cold start is a normal state, and
+            // repeating it every 30 seconds would train operators to ignore the log.
+            log(() -> LogUtil.info("AnalysisA cloud is reachable but has no usable model yet;"
+                    + " recording is available, detection stays disabled"));
+        }
         scheduleRecovery();
     }
 
     /**
      * Builds a gateway against an already-constructed transport, or returns empty for every reason the
-     * cloud cannot be used. Never throws: a cloud that misbehaves must not take detection — or the plugin —
-     * down with it.
+     * cloud cannot be used at all. Never throws: a cloud that misbehaves must not take detection — or the
+     * plugin — down with it.
+     *
+     * <p>A cloud that answers {@code 404 no_model} is <em>not</em> one of those reasons. That answer proves
+     * the endpoint is reachable and the credentials are accepted, which is everything uploading samples
+     * needs; the resulting gateway simply cannot infer yet. Treating it as unusable would deadlock the
+     * first model: no gateway means no recording, and no recording means nothing to train a model from.
      *
      * <p>This is the seam the fail-open behaviour is tested through.
      */
@@ -86,16 +116,17 @@ public final class CloudGateway {
 
             final Optional<ModelMetadata> metadata = client.fetchModelMetadata();
             if (metadata.isEmpty()) {
-                log(() -> LogUtil.info("AnalysisA cloud has no published model yet; detection stays disabled"));
-                return Optional.empty();
+                return Optional.of(new CloudGateway(client, null, salt));
             }
 
             final int expected = RotationWindow.FEATURE_DIMENSIONS;
             if (metadata.get().featureDimensions() != expected) {
+                // The model exists but this build cannot speak to it. Keep the gateway — uploading is
+                // still how a correctly-shaped model gets trained — but never infer against it.
                 log(() -> LogUtil.error("AnalysisA cloud model expects " + metadata.get().featureDimensions()
                         + " feature dimensions but this build sends " + expected
-                        + "; detection stays disabled"));
-                return Optional.empty();
+                        + "; detection stays disabled, recording still works"));
+                return Optional.of(new CloudGateway(client, null, salt));
             }
 
             return Optional.of(new CloudGateway(client, metadata.get(), salt));
@@ -106,22 +137,34 @@ public final class CloudGateway {
     }
 
     /**
-     * Re-attempts a cloud that was unusable last time. Does nothing when there is no config yet, when
-     * detection is switched off, or when a gateway is already in place.
+     * Re-attempts a cloud that was unusable last time, and upgrades a gateway that had no model once one
+     * is published. Does nothing when there is no config yet or when detection is switched off.
      */
     static void recoverIfNeeded() {
         final ConfigManager config = lastConfig;
-        if (config == null || current != null) {
+        if (config == null) {
             return;
         }
         if (!config.getBooleanElse("AnalysisA.cloud.enabled", false)) {
             return;
         }
 
+        final CloudGateway existing = current;
+        if (existing != null && existing.canInfer()) {
+            return;
+        }
+
         final CloudGateway recovered = attemptFrom(config);
-        if (recovered != null) {
+        if (recovered == null) {
+            return;
+        }
+        if (existing == null) {
             current = recovered;
             log(() -> LogUtil.info("AnalysisA cloud became available again; detection re-enabled"));
+        } else if (recovered.canInfer()) {
+            // The cold start ended: a model was published since the last attempt.
+            current = recovered;
+            log(() -> LogUtil.info("AnalysisA cloud now has a published model; detection enabled"));
         }
     }
 

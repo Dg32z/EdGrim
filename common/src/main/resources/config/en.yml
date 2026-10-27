@@ -276,6 +276,8 @@ AnalysisA:
     # from the cloud. Cloud verdicts only ever add VL - whether that becomes a punishment is still decided
     # here, by analysis-window-size and min-cheat-votes, plus the Analysis punishments group.
     # A timeout, an error or an unreachable cloud never produces a VL.
+    # Before the first model is published, inference stays off but /watchneko record still works: the
+    # samples it uploads are what trains that first model.
     cloud:
         # Master switch. Off by default: nothing is sent anywhere until you enable it and configure it.
         enabled: false
