@@ -296,7 +296,7 @@ AnalysisA:
     # Voting window: how many sample verdicts to accumulate before judging.
     analysis-window-size: 10
     # How many cheat-like verdicts inside that window are needed to alert.
-    min-cheat-votes: 6
+    min-cheat-votes: 8
     # While over quota, only windows at least this energetic are sent; still windows carry no aim signal.
     local-gate-min-energy: 1.25
     # How long to keep sending only energetic samples after a 429, in milliseconds.

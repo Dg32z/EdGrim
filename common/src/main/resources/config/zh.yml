@@ -297,7 +297,7 @@ AnalysisA:
     # 投票窗口大小：累计多少个样本裁决后开始判断。
     analysis-window-size: 10
     # 窗口内至少多少个 cheat-like 裁决才告警。
-    min-cheat-votes: 6
+    min-cheat-votes: 8
     # 超出配额时只发送能量不低于此值的窗口；静止窗口不携带任何瞄准信号。
     local-gate-min-energy: 1.25
     # 收到 429 后只发高能量样本的持续时间（毫秒）。
