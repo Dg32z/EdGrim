@@ -24,7 +24,15 @@ public final class HttpCloudTransport implements CloudTransport {
     public HttpCloudTransport(final String endpoint, final Duration timeout) {
         this.base = URI.create(endpoint);
         this.timeout = timeout;
-        this.client = HttpClient.newBuilder().connectTimeout(timeout).build();
+        // Pin HTTP/1.1. The JDK client otherwise attempts an h2c upgrade on every plaintext request
+        // (`Connection: Upgrade, HTTP2-Settings` + `Upgrade: h2c`). The service runs on uvicorn, which
+        // speaks HTTP/1.1 only, so each request logs "Unsupported upgrade request" and a missing-websocket
+        // warning before falling back. The requests succeed either way; the point of pinning is to stop
+        // burying real errors under two lines of noise per request.
+        this.client = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
+                .connectTimeout(timeout)
+                .build();
     }
 
     @Override
