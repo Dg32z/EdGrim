@@ -88,4 +88,86 @@ class RecordingSessionsTest {
         RecordingSessions.clear();
         assertFalse(RecordingSessions.isRecording(PLAYER));
     }
+
+    @Test
+    void closingFreezesTheSampleSetButKeepsTheSessionRetrievable() {
+        final RecordingSession session =
+                RecordingSessions.start(PLAYER, "Notch", Label.CHEAT, "rs-1").orElseThrow();
+        session.add(sample("a"));
+        session.close();
+
+        assertTrue(session.isClosed());
+        assertTrue(RecordingSessions.isRecording(PLAYER),
+                "a stopped session must stay reachable so a failed upload can be retried");
+        assertEquals(1, session.size(), "the samples it stopped with are the samples it keeps");
+    }
+
+    @Test
+    void aClosedSessionRefusesFurtherSamples() {
+        final RecordingSession session =
+                RecordingSessions.start(PLAYER, "Notch", Label.CHEAT, "rs-1").orElseThrow();
+        session.add(sample("a"));
+        session.close();
+
+        assertFalse(session.add(sample("b")), "stopping decides what the recording is");
+        assertEquals(1, session.size(), "a retry must upload exactly what the admin stopped");
+    }
+
+    @Test
+    void closingIsIdempotentSoARetryDoesNotDisturbTheSamples() {
+        final RecordingSession session =
+                RecordingSessions.start(PLAYER, "Notch", Label.CHEAT, "rs-1").orElseThrow();
+        session.add(sample("a"));
+        session.close();
+        session.close();
+
+        assertEquals(1, session.size());
+        assertTrue(session.isClosed());
+    }
+
+    @Test
+    void anUploadIsClaimedOnceSoTwoStopsInARowCannotSendTheSameBatchTwice() {
+        final RecordingSession session =
+                RecordingSessions.start(PLAYER, "Notch", Label.CHEAT, "rs-1").orElseThrow();
+
+        assertTrue(session.beginUpload());
+        assertFalse(session.beginUpload(), "an in-flight upload must not be started a second time");
+
+        session.endUpload();
+        assertTrue(session.beginUpload(), "a finished attempt may be retried");
+    }
+
+    @Test
+    void theSessionSurvivesAFailedUploadAndCanStillBeStopped() {
+        final RecordingSession session =
+                RecordingSessions.start(PLAYER, "Notch", Label.CHEAT, "rs-1").orElseThrow();
+        session.add(sample("a"));
+        session.close();
+
+        // What a failed upload does: release the claim and leave the session alone.
+        session.beginUpload();
+        session.endUpload();
+
+        assertTrue(RecordingSessions.isRecording(PLAYER));
+        assertEquals(1, RecordingSessions.stop(PLAYER).orElseThrow().size());
+    }
+
+    @Test
+    void aLateUploadCallbackDoesNotRemoveANewerSessionForTheSamePlayer() {
+        final RecordingSession uploaded =
+                RecordingSessions.start(PLAYER, "Notch", Label.CHEAT, "rs-1").orElseThrow();
+        uploaded.close();
+
+        // The admin discards while the upload is still in flight, then starts a fresh recording.
+        RecordingSessions.stop(PLAYER);
+        final RecordingSession newer =
+                RecordingSessions.start(PLAYER, "Notch", Label.LEGIT, "rs-2").orElseThrow();
+
+        // The old upload now finishes successfully and tries to clean up after itself.
+        assertFalse(RecordingSessions.stopIfCurrent(PLAYER, uploaded),
+                "the callback must not match a session it did not start");
+        assertTrue(RecordingSessions.isRecording(PLAYER));
+        assertEquals("rs-2", RecordingSessions.active(PLAYER).orElseThrow().sessionId());
+        assertTrue(RecordingSessions.stopIfCurrent(PLAYER, newer), "the current session is still removable");
+    }
 }

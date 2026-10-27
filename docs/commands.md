@@ -299,6 +299,17 @@ Milliseconds per prediction (avg. 20k): 0.019
 
 **动作写错不会丢数据。** `upload` / `discard` 拼错时命令会直接拒绝，录制原样保留，重打一次即可。
 
+**上传失败不会丢数据。** 上传出错时样本原样保留，命令会告诉你重跑哪一条：
+
+```text
+Upload failed; 524 samples from Steve are kept. Run
+'/watchneko record stop Steve upload' again to retry. Cause: ...
+```
+
+修好问题（网络、密钥、云端重启等）后，**重跑同一条命令**即可重试同一批样本。样本在上传成功或 `discard` 之前不会消失。
+
+`stop` 之后这个录制就冻结了：该玩家再产生的样本不会混进来，所以你重试上传的正是你停下来时的那一批。想重新录一段，等这一批上传成功或丢弃后再 `record start`。
+
 如果中途掉过线，`stop` 会提示中断次数：
 
 ```text

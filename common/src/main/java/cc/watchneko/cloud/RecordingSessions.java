@@ -34,9 +34,29 @@ public final class RecordingSessions {
                 : Optional.empty();
     }
 
-    /** Ends a player's session and hands it back, or empty when they were not being recorded. */
+    /**
+     * Ends a player's session and hands it back, or empty when they were not being recorded.
+     *
+     * <p>This is the final step, taken only once the samples are safely uploaded or deliberately thrown
+     * away. Stopping the recording is {@link RecordingSession#close()}, which keeps the session — and its
+     * samples — in the registry so a failed upload can be retried.
+     */
     public static Optional<RecordingSession> stop(final UUID player) {
         return Optional.ofNullable(ACTIVE.remove(player));
+    }
+
+    /**
+     * Ends a player's session only if it is still the one the caller resolved.
+     *
+     * <p>Needed by the upload completion callback, which runs later on another thread: by the time it
+     * fires, the admin may have discarded this session and started a fresh recording for the same player.
+     * Unconditional removal there would silently delete the new recording instead of the one that was just
+     * uploaded.
+     *
+     * @return whether this exact session was still the registered one
+     */
+    public static boolean stopIfCurrent(final UUID player, final RecordingSession session) {
+        return ACTIVE.remove(player, session);
     }
 
     public static Optional<RecordingSession> active(final UUID player) {

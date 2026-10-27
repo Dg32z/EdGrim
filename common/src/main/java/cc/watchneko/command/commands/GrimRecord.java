@@ -92,9 +92,12 @@ public class GrimRecord implements BuildableCommand {
                 RecordingSessions.start(uuid, target.getName(), label.get(), sessionId);
 
         if (started.isEmpty()) {
-            sender.sendMessage(Component.text(
-                    target.getName() + " is already being recorded; stop that session first.",
-                    NamedTextColor.RED));
+            final String state = RecordingSessions.active(uuid)
+                    .filter(RecordingSession::isClosed)
+                    .map(session -> "has a stopped recording of " + session.size()
+                            + " samples that has not been uploaded or discarded yet; resolve it first")
+                    .orElse("is already being recorded; stop that session first");
+            sender.sendMessage(Component.text(target.getName() + " " + state + ".", NamedTextColor.RED));
             return;
         }
 
@@ -122,9 +125,7 @@ public class GrimRecord implements BuildableCommand {
         final Sender sender = context.sender();
         final String action = String.valueOf(context.<String>get("action")).toLowerCase(Locale.ROOT);
 
-        // Validate before touching the session. The session is removed as soon as it is found, so rejecting a
-        // mistyped action afterwards would have already destroyed the recording — minutes of an admin's work
-        // lost to a typo.
+        // Validate before touching the session. A mistyped action must not cost the admin their recording.
         if (!action.equals("upload") && !action.equals("discard")) {
             sender.sendMessage(Component.text(
                     "Action must be 'upload' or 'discard'; nothing was changed.", NamedTextColor.RED));
@@ -145,14 +146,12 @@ public class GrimRecord implements BuildableCommand {
         }
 
         final RecordingSession session = found.get();
-        final Optional<RecordingSession> ended = RecordingSessions.stop(session.player());
-        if (ended.isEmpty()) {
-            sender.sendMessage(Component.text(
-                    name + " is not being recorded.", NamedTextColor.RED));
-            return;
-        }
+        // Closing freezes the sample set. It is idempotent, so running stop again after a failed upload
+        // closes an already-closed session and retries the very same samples.
+        session.close();
 
         if (action.equals("discard")) {
+            RecordingSessions.stop(session.player());
             sender.sendMessage(Component.text(
                     "Discarded " + session.size() + " samples from " + session.playerName()
                             + describeInterruptions(session) + ".",
@@ -160,10 +159,29 @@ public class GrimRecord implements BuildableCommand {
             return;
         }
 
+        upload(sender, session);
+    }
+
+    /**
+     * Uploads a closed session, keeping it in the registry unless the upload succeeds.
+     *
+     * <p>The samples are the expensive part — they cannot be re-recorded, because the moment has passed.
+     * A failed upload therefore changes nothing: the admin fixes whatever was wrong and runs the same
+     * command again.
+     */
+    private void upload(final @NonNull Sender sender, final RecordingSession session) {
         final CloudGateway gateway = CloudGateway.current();
         if (gateway == null) {
             sender.sendMessage(Component.text(
-                    "Cloud is not available; the session's samples were dropped, not uploaded.",
+                    "Cloud is not available; " + session.size() + " samples from " + session.playerName()
+                            + " are kept. Fix the cloud settings, then run this command again to retry.",
+                    NamedTextColor.RED));
+            return;
+        }
+
+        if (!session.beginUpload()) {
+            sender.sendMessage(Component.text(
+                    "An upload of " + session.playerName() + "'s samples is already in flight.",
                     NamedTextColor.RED));
             return;
         }
@@ -175,14 +193,30 @@ public class GrimRecord implements BuildableCommand {
 
         gateway.uploadAsync(session.sessionId(), session.label(), session.samples())
                 .whenComplete((result, error) -> {
+                    session.endUpload();
                     if (error != null) {
+                        // Kept, not dropped: the admin can retry the same batch with the same command.
                         sender.sendMessage(Component.text(
-                                "Upload failed, samples dropped: " + error.getMessage(),
+                                "Upload failed; " + session.size() + " samples from "
+                                        + session.playerName() + " are kept. Run "
+                                        + "'/watchneko record stop " + session.playerName() + " upload'"
+                                        + " again to retry. Cause: " + describeError(error),
                                 NamedTextColor.RED));
                         return;
                     }
+                    // Only now is the recording resolved and safe to forget. Conditional on identity: an
+                    // admin who discarded this session and started a new recording for the same player
+                    // must not lose that new recording to this late callback.
+                    RecordingSessions.stopIfCurrent(session.player(), session);
                     sender.sendMessage(describe(result, session));
                 });
+    }
+
+    /** The most useful part of a failed upload's cause, without the wrapper noise. */
+    private static String describeError(final Throwable error) {
+        final Throwable cause = error.getCause() != null ? error.getCause() : error;
+        return cause.getClass().getSimpleName()
+                + (cause.getMessage() == null ? "" : ": " + cause.getMessage());
     }
 
     /**

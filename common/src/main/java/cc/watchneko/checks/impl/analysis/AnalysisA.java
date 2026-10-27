@@ -148,8 +148,13 @@ public final class AnalysisA extends Check implements RotationCheck, AttackSigna
             // A player being recorded is producing training data, not evidence. The sample goes to the
             // session and is not sent for inference: a recording session must never influence the
             // detection it is meant to help train.
+            //
+            // A closed session is one the admin already stopped whose upload has not succeeded yet. It
+            // stays in the registry so the retry can find it, but it is no longer recording: samples for
+            // that player must go back to being inferred rather than silently disappearing into a set
+            // that will not grow.
             final Optional<RecordingSession> recording = RecordingSessions.active(player.uuid);
-            if (recording.isPresent()) {
+            if (recording.isPresent() && !recording.get().isClosed()) {
                 recording.get().add(sample);
                 continue;
             }
