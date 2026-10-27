@@ -101,5 +101,13 @@ class PeriodicOps:
         self._stop.set()
 
     def _loop(self) -> None:
+        # Retrain immediately on start, then on the interval.
+        #
+        # Models are deliberately not persisted: the published history lives in this process only, so a
+        # restart begins with no model at all. Waiting a full interval first would leave the service
+        # answering 404 no_model - and every plugin that talks to it running detection-disabled - for up
+        # to an hour after every restart. The samples are in SQLite, so the work to recover is one cycle,
+        # and there is no reason to delay it.
+        self.run_once()
         while not self._stop.wait(self._interval):
             self.run_once()

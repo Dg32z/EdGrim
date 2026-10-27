@@ -200,3 +200,49 @@ def test_the_queue_backlog_reports_samples_not_yet_trained_on() -> None:
     cycle.run_once([TENANT])
 
     assert metrics.queue_backlog == 0, "the new samples were trained on in this same cycle"
+
+
+def test_start_retrains_immediately_rather_than_waiting_a_full_interval() -> None:
+    """Models are not persisted, so a restart starts with none.
+
+    Waiting an interval first would leave the service answering no_model - and every plugin running with
+    detection disabled - for up to an hour after each restart. The first tick must happen at startup.
+    """
+    store = SampleStore()
+    seed(store)
+    cycle, registry = build(store)
+    # An interval far longer than the test: only the immediate tick can publish anything.
+    periodic = PeriodicOps(cycle=cycle, tenants=[TENANT], interval_seconds=3600.0)
+
+    periodic.start()
+    try:
+        deadline = time.monotonic() + 5.0
+        while registry.current() is None and time.monotonic() < deadline:
+            time.sleep(0.01)
+    finally:
+        periodic.stop()
+
+    assert registry.current() is not None, "the service must recover its model without waiting an interval"
+
+
+def test_an_empty_dataset_at_startup_does_not_prevent_a_later_retrain() -> None:
+    """The immediate tick runs against whatever exists; no samples is not an error, just nothing to do."""
+    store = SampleStore()
+    metrics = Metrics()
+    cycle, registry = build(store, metrics)
+    periodic = PeriodicOps(cycle=cycle, tenants=[TENANT], interval_seconds=0.01)
+
+    periodic.start()
+    try:
+        time.sleep(0.05)
+        assert registry.current() is None, "nothing to train on yet"
+        assert metrics.errors == 0, "an empty dataset is not a failure"
+
+        seed(store)
+        deadline = time.monotonic() + 5.0
+        while registry.current() is None and time.monotonic() < deadline:
+            time.sleep(0.01)
+    finally:
+        periodic.stop()
+
+    assert registry.current() is not None, "samples arriving later must still be trained on"
