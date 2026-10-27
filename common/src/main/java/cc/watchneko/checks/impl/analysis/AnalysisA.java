@@ -140,10 +140,7 @@ public final class AnalysisA extends Check implements RotationCheck, AttackSigna
             // The sample id is derived from the tenant-salted hash, never from the raw UUID: the id travels
             // on the wire, and the whole point of hashing is that nothing identifying leaves the server.
             final String playerHash = gateway.playerHash(player.uuid);
-            final FeatureSample sample = new FeatureSample(
-                    SampleIdentity.of(playerHash, ++sampleCounter),
-                    playerHash,
-                    extracted.get().features());
+            final double[] features = extracted.get().features();
 
             // A player being recorded is producing training data, not evidence. The sample goes to the
             // session and is not sent for inference: a recording session must never influence the
@@ -155,7 +152,14 @@ public final class AnalysisA extends Check implements RotationCheck, AttackSigna
             // that will not grow.
             final Optional<RecordingSession> recording = RecordingSessions.active(player.uuid);
             if (recording.isPresent() && !recording.get().isClosed()) {
-                recording.get().add(sample);
+                // Recording samples are stored by the cloud under their id, so the id has to be unique
+                // across every session this tenant uploads - not just within this connection. Scoping it
+                // to the session is what makes a reconnect, which resets the per-player counter, stop
+                // producing ids the cloud already has.
+                recording.get().add(new FeatureSample(
+                        SampleIdentity.forRecording(playerHash, recording.get().sessionId(), ++sampleCounter),
+                        playerHash,
+                        features));
                 continue;
             }
 
@@ -166,7 +170,8 @@ public final class AnalysisA extends Check implements RotationCheck, AttackSigna
                 continue;
             }
 
-            batch.add(sample);
+            batch.add(new FeatureSample(
+                    SampleIdentity.of(playerHash, ++sampleCounter), playerHash, features));
         }
     }
 
