@@ -91,6 +91,7 @@ public class CheckManager {
         packetChecks = new ImmutableClassToInstanceMap.Builder<PacketCheck>()
                 .put(PacketOrderProcessor.class, player.packetOrderProcessor)
                 .put(Reach.class, new Reach(player))
+                .put(ExploitA.class, new ExploitA(player)) // 必须前置这个检查
                 .put(InteractB.class, new InteractB(player))
                 .put(AutoclickerA.class, new AutoclickerA(player))
                 .put(PingSpoofA.class, new PingSpoofA(player))
