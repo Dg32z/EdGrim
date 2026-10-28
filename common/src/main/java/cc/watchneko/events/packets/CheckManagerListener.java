@@ -605,6 +605,12 @@ public class CheckManagerListener extends PacketListenerAbstract {
             return;
         }
 
+        // 被撤销的c03不应该再进入模拟
+        if (event.isCancelled()
+                && WrapperPlayClientPlayerFlying.isFlying(event.getPacketType())) {
+            return;
+        }
+
         // Determine if teleport BEFORE we call the pre-prediction vehicle
         if (event.getPacketType() == PacketType.Play.Client.VEHICLE_MOVE) {
             WrapperPlayClientVehicleMove move = new WrapperPlayClientVehicleMove(event);
